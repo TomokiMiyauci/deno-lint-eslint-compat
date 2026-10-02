@@ -1,0 +1,8 @@
+{
+  "name": "@miyauci/deno-lint-eslint",
+  "exports": "./src/mod.ts",
+  "imports": {
+    "@std/collections": "jsr:@std/collections@^1.4.0",
+    "eslint": "npm:eslint@^10.11.0"
+  }
+}
