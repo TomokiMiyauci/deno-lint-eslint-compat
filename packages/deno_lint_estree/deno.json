@@ -1,0 +1,7 @@
+{
+  "name": "@miyauci/deno-lint-estree",
+  "exports": "./src/mod.ts",
+  "imports": {
+    "estree": "npm:@types/estree@^1.0.9"
+  }
+}
