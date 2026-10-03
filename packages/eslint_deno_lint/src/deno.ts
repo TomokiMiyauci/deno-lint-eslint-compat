@@ -2,13 +2,15 @@ import * as eslint from "eslint";
 import * as deno2estree from "@miyauci/deno-lint-estree";
 import * as Eslint2Deno from "./eslint.ts";
 import * as estree from "estree";
-import { ScopeManager } from "eslint-scope";
+import { analyze } from "eslint-scope";
+import { traverse } from "estraverse";
 
 export function toRuleContext(
   context: Deno.lint.RuleContext,
+  mapper: deno2estree.Mapper,
 ): eslint.Rule.RuleContext {
   const { filename, id } = context;
-  const sourceCode = toSourceCode(context.sourceCode);
+  const sourceCode = toSourceCode(context.sourceCode, mapper);
 
   return {
     filename,
@@ -30,12 +32,19 @@ export function toRuleContext(
   };
 }
 
-export function toSourceCode(source: Deno.lint.SourceCode): eslint.SourceCode {
-  const ast = toProgram(source.ast, source.text);
+export function toSourceCode(
+  source: Deno.lint.SourceCode,
+  mapper: deno2estree.Mapper,
+): eslint.SourceCode {
+  const ast = toProgram(source.ast, source.text, mapper);
+
   const sourceCode = new eslint.SourceCode({
     ast,
     text: source.text,
-    scopeManager: new ScopeManager({}),
+    scopeManager: analyze(ast, {
+      ecmaVersion: 2022,
+      sourceType: ast.sourceType,
+    }),
   });
 
   return sourceCode;
@@ -44,6 +53,7 @@ export function toSourceCode(source: Deno.lint.SourceCode): eslint.SourceCode {
 export function toProgram(
   ast: Deno.lint.Program,
   text: string,
+  mapper: deno2estree.Mapper,
 ): eslint.AST.Program {
   const {
     body,
@@ -54,7 +64,7 @@ export function toProgram(
     loc,
     range,
     trailingComments,
-  } = deno2estree.toProgram(ast);
+  } = deno2estree.toProgram(ast, mapper);
 
   return {
     type,
@@ -195,23 +205,27 @@ const tokenTypes = new Set<string>(
   ] satisfies eslint.AST.TokenType[],
 );
 
-export function toNode(node: Deno.lint.Node): eslint.Rule.Node {
-  const estreeNode = deno2estree.toNode(node);
+export function toNode(
+  node: Deno.lint.Node,
+  cache: WeakMap<WeakKey, any>,
+): eslint.Rule.Node {
+  const cached = cache.get(node);
 
-  if ("parent" in node && node.parent !== null) {
-    const parent = toNode(node.parent);
-
-    return { ...estreeNode, parent } as (
-      & Exclude<estree.Node, estree.Program>
-      & eslint.Rule.NodeParentExtension
-    );
+  if (!cached) {
+    throw new Error(node.type);
   }
 
-  return {
-    ...estreeNode,
-    parent: null,
-    tokens: [],
-    comments: [],
-    loc: {} as any,
-  } satisfies (eslint.AST.Program & { parent: null });
+  if (!("parent" in cached)) {
+    setParents(cached);
+  }
+
+  return cached;
+}
+
+function setParents(node: estree.Node): void {
+  traverse(node, {
+    enter(current, parent) {
+      (current as any as eslint.Rule.Node).parent = parent;
+    },
+  });
 }

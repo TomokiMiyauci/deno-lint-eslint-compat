@@ -2,6 +2,7 @@ import * as eslint from "eslint";
 import * as Deno2Eslint from "./deno.ts";
 import * as estree from "estree";
 import { mapValues } from "@std/collections";
+import * as deno2estree from "@miyauci/deno-lint-estree";
 
 export function toReportData(
   descriptor: eslint.Rule.ReportDescriptor,
@@ -79,28 +80,42 @@ function getMessage(
 export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
   return {
     create(context): Deno.lint.LintVisitor {
-      const eslintContext = Deno2Eslint.toRuleContext(context);
-      const visitor = rule.create(eslintContext);
-      const listener = toLisenter(visitor);
+      const weakMap = new WeakMap();
+      const mapper = deno2estree.createMapper((node, estree) => {
+        weakMap.set(node, estree);
+      });
+      const eslintContext = Deno2Eslint.toRuleContext(context, mapper);
 
-      return listener;
+      weakMap.set(context.sourceCode.ast, eslintContext.sourceCode.ast);
+
+      const ruleListener = rule.create(eslintContext);
+      const nodeListener = toNodeListener(ruleListener);
+      const visitor = toLintVisitor(nodeListener, weakMap);
+
+      return visitor;
     },
   };
 }
 
-function toLisenter(visitor: eslint.Rule.RuleListener): Deno.lint.LintVisitor {
+function toLintVisitor(
+  listener: eslint.Rule.NodeListener,
+  cache: WeakMap<WeakKey, any>,
+): Deno.lint.LintVisitor {
   const result: Deno.lint.LintVisitor = {};
 
   for (
-    const [selector, listener] of Object.entries(toNodeListener(visitor)) as [
+    const [selector, callback] of Object.entries(listener) as [
       string,
-      Function,
+      Function | undefined,
     ][]
   ) {
-    result[selector] = (node) => {
-      const eslintNode = Deno2Eslint.toNode(node);
-      listener?.(eslintNode);
-    };
+    if (callback) {
+      result[selector] = (node) => {
+        const esNode = Deno2Eslint.toNode(node, cache);
+
+        callback(esNode);
+      };
+    }
   }
 
   return result;
