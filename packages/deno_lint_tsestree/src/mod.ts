@@ -815,9 +815,23 @@ const definition = {
     node: Deno.lint.TSDeclareFunction,
     context,
   ): ExcludeBase<TSESTree.TSDeclareFunction> => {
-    throw new Error();
+    const id = node.id && context.toNode(node.id);
+    const params = node.params.map(context.toNode);
+    const returnType = node.returnType && context.toNode(node.returnType);
+    const typeParameters = node.typeParameters &&
+      context.toNode(node.typeParameters);
 
-    return { async: node.async };
+    return {
+      async: node.async,
+      body: node.body,
+      declare: node.declare,
+      expression: false,
+      generator: node.generator,
+      id,
+      params,
+      returnType,
+      typeParameters,
+    };
   },
 
   TSEnumDeclaration: (
@@ -1004,13 +1018,16 @@ const definition = {
     node: Deno.lint.TSImportType,
     context,
   ): ExcludeBase<TSESTree.TSImportType> => {
-    throw new Error();
     const argument = context.toNode(node.argument);
     const qualifier = node.qualifier && context.toNode(node.qualifier);
     const typeArguments = node.typeArguments &&
       context.toNode(node.typeArguments);
 
-    return { argument, qualifier, typeArguments };
+    return {
+      argument,
+      qualifier,
+      typeArguments,
+    };
   },
 
   TSIndexedAccessType: (
@@ -1098,8 +1115,14 @@ const definition = {
     node: Deno.lint.TSNamedTupleMember,
     context,
   ): ExcludeBase<TSESTree.TSNamedTupleMember> => {
-    throw new Error();
-    return {};
+    const elementType = context.toNode(node.elementType);
+    const label = context.toNode(node.label);
+
+    return {
+      elementType,
+      label,
+      optional: node.optional,
+    };
   },
 
   TSNeverKeyword: (
@@ -1134,26 +1157,35 @@ const definition = {
     node: Deno.lint.TSOptionalType,
     context,
   ): ExcludeBase<TSESTree.TSOptionalType> => {
-    throw new Error();
+    const typeAnnotation = context.toNode(node.typeAnnotation);
 
-    return {};
+    return {
+      typeAnnotation,
+    };
   },
 
   TSQualifiedName: (
     node: Deno.lint.TSQualifiedName,
     context,
   ): ExcludeBase<TSESTree.TSQualifiedName> => {
-    throw new Error();
+    const left = context.toNode(node.left);
+    const right = context.toNode(node.right);
 
-    return {};
+    return {
+      left,
+      right,
+    };
   },
 
   TSRestType: (
     node: Deno.lint.TSRestType,
     context,
   ): ExcludeBase<TSESTree.TSRestType> => {
-    throw new Error();
-    return {};
+    const typeAnnotation = context.toNode(node.typeAnnotation);
+
+    return {
+      typeAnnotation,
+    };
   },
 
   TSStringKeyword: (
@@ -1174,8 +1206,13 @@ const definition = {
     node: Deno.lint.TSTemplateLiteralType,
     context,
   ): ExcludeBase<TSESTree.TSTemplateLiteralType> => {
-    throw new Error();
-    return {};
+    const quasis = node.quasis.map(context.toNode);
+    const types = node.types.map(context.toNode);
+
+    return {
+      quasis,
+      types,
+    };
   },
 
   TSThisType: (
@@ -1189,8 +1226,11 @@ const definition = {
     node: Deno.lint.TSTupleType,
     context,
   ): ExcludeBase<TSESTree.TSTupleType> => {
-    throw new Error();
-    return {};
+    const elementTypes = node.elementTypes.map(context.toNode);
+
+    return {
+      elementTypes,
+    };
   },
 
   TSTypeLiteral: (
@@ -1246,8 +1286,14 @@ const definition = {
     node: Deno.lint.TSTypeQuery,
     context,
   ): ExcludeBase<TSESTree.TSTypeQuery> => {
-    throw new Error();
-    return {};
+    const exprName = context.toNode(node.exprName);
+    const typeArguments = node.typeArguments &&
+      context.toNode(node.typeArguments);
+
+    return {
+      exprName,
+      typeArguments,
+    };
   },
 
   TSTypeReference: (
@@ -1569,22 +1615,16 @@ const definition = {
     node: Deno.lint.JSXOpeningElement,
     context,
   ): ExcludeBase<TSESTree.JSXOpeningElement> => {
-    throw new Error();
-    const attributes = node.attributes.map((child) => {
-      switch (child.type) {
-        case "JSXAttribute":
-          return context.toNode(child);
-        case "JSXSpreadAttribute":
-          return context.toNode(child);
-      }
-    });
+    const attributes = node.attributes.map(context.toNode);
     const typeArguments = node.typeArguments &&
       context.toNode(node.typeArguments);
+    const name = context.toNode(node.name);
 
     return {
       attributes,
       selfClosing: node.selfClosing,
       typeArguments,
+      name,
     };
   },
 
@@ -1592,31 +1632,41 @@ const definition = {
     node: Deno.lint.JSXAttribute,
     context,
   ): ExcludeBase<TSESTree.JSXAttribute> => {
-    throw new Error();
-    return {};
+    const name = context.toNode(node.name);
+    const value = node.value && context.toNode(node.value);
+
+    return {
+      name,
+      value,
+    };
   },
 
   JSXSpreadAttribute: (
     node: Deno.lint.JSXSpreadAttribute,
     context,
   ): ExcludeBase<TSESTree.JSXSpreadAttribute> => {
-    throw new Error();
-    return {};
+    const argument = context.toNode(node.argument);
+
+    return {
+      argument,
+    };
   },
 
   JSXClosingElement: (
     node: Deno.lint.JSXClosingElement,
     context,
   ): ExcludeBase<TSESTree.JSXClosingElement> => {
-    throw new Error();
-    return {};
+    const name = context.toNode(node.name);
+
+    return {
+      name,
+    };
   },
 
   JSXOpeningFragment: (
     node: Deno.lint.JSXOpeningFragment,
     context,
   ): ExcludeBase<TSESTree.JSXOpeningFragment> => {
-    throw new Error();
     return {};
   },
 
@@ -1624,7 +1674,6 @@ const definition = {
     node: Deno.lint.JSXClosingFragment,
     context,
   ): ExcludeBase<TSESTree.JSXClosingFragment> => {
-    throw new Error();
     return {};
   },
 
@@ -1632,32 +1681,44 @@ const definition = {
     node: Deno.lint.JSXExpressionContainer,
     context,
   ): ExcludeBase<TSESTree.JSXExpressionContainer> => {
-    throw new Error();
-    return {};
+    const expression = context.toNode(node.expression);
+    return {
+      expression,
+    };
   },
 
   JSXText: (
     node: Deno.lint.JSXText,
     context,
   ): ExcludeBase<TSESTree.JSXText> => {
-    throw new Error();
-    return {};
+    return {
+      raw: node.raw,
+      value: node.value,
+    };
   },
 
   JSXMemberExpression: (
     node: Deno.lint.JSXMemberExpression,
     context,
   ): ExcludeBase<TSESTree.JSXMemberExpression> => {
-    throw new Error();
-    return {};
+    const $object = context.toNode(node.object);
+    const property = context.toNode(node.property);
+
+    return {
+      object: $object,
+      property,
+    };
   },
 
   TSModuleBlock: (
     node: Deno.lint.TSModuleBlock,
     context,
   ): ExcludeBase<TSESTree.TSModuleBlock> => {
-    throw new Error();
-    return {};
+    const body = node.body.map(context.toNode);
+
+    return {
+      body,
+    };
   },
 
   TSClassImplements: (
@@ -1676,6 +1737,7 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSAbstractMethodDefinition> => {
     const key = context.toNode(node.key);
+    const value = context.toNode(node.value);
 
     return {
       kind: node.kind,
@@ -1686,6 +1748,7 @@ const definition = {
       accessibility: node.accessibility,
       computed: node.computed,
       key,
+      value,
     };
   },
 
@@ -1693,24 +1756,60 @@ const definition = {
     node: Deno.lint.TSAbstractPropertyDefinition,
     context,
   ): ExcludeBase<TSESTree.TSAbstractPropertyDefinition> => {
-    throw new Error();
-    return {};
+    const decorators = node.decorators.map(context.toNode);
+    const key = context.toNode(node.key);
+    const typeAnnotation = context.toNode(node.typeAnnotation);
+
+    return {
+      accessibility: node.accessibility,
+      computed: node.computed,
+      declare: node.declare,
+      decorators,
+      definite: node.definite,
+      key,
+      optional: node.optional,
+      override: node.override,
+      readonly: node.readonly,
+      static: node.static,
+      typeAnnotation,
+      value: node.value,
+    };
   },
 
   TSEmptyBodyFunctionExpression: (
     node: Deno.lint.TSEmptyBodyFunctionExpression,
     context,
   ): ExcludeBase<TSESTree.TSEmptyBodyFunctionExpression> => {
-    throw new Error();
-    return {};
+    const params = context.toNode(node.params);
+    const returnType = context.toNode(node.returnType);
+    const typeParameters = context.toNode(node.typeParameters);
+
+    return {
+      async: node.async,
+      body: node.body,
+      declare: node.declare,
+      expression: node.expression,
+      generator: node.generator,
+      id: node.id,
+      params,
+      returnType,
+      typeParameters,
+    };
   },
 
   TSCallSignatureDeclaration: (
     node: Deno.lint.TSCallSignatureDeclaration,
     context,
   ): ExcludeBase<TSESTree.TSCallSignatureDeclaration> => {
-    throw new Error();
-    return {};
+    const params = node.params.map(context.toNode);
+    const returnType = context.toNode(node.returnType);
+    const typeParameters = context.toNode(node.typeParameters);
+
+    return {
+      params,
+      returnType,
+      typeParameters,
+    };
   },
 
   TSPropertySignature: (
@@ -1719,29 +1818,7 @@ const definition = {
   ): ExcludeBase<TSESTree.TSPropertySignature> => {
     const typeAnnotation = node.typeAnnotation &&
       context.toNode(node.typeAnnotation);
-
-    const base = {
-      accessibility: undefined, // TODO,
-      // computed: node.computed,
-      optional: node.optional,
-      readonly: node.readonly,
-      static: node.static,
-      typeAnnotation,
-    };
-
     const key = context.toNode(node.key);
-
-    if (node.computed) {
-      return {
-        ...base,
-        computed: node.computed,
-        key: node.key,
-      };
-    }
-
-    if (!(key.type === Type.Identifier || key.type === Type.Literal)) {
-      throw new Error("semnatic");
-    }
 
     return {
       accessibility: undefined, // TODO,
@@ -1849,11 +1926,14 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSIndexSignature> => {
     const parameters = node.parameters.map(context.toNode);
+    const typeAnnotation = context.toNode(node.typeAnnotation);
 
     return {
       parameters,
       readonly: node.readonly,
       static: node.static,
+      accessibility: undefined, // TODO
+      typeAnnotation,
     };
   },
 
@@ -1898,9 +1978,15 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSParameterProperty> => {
     const parameter = context.toNode(node.parameter);
+    const decorators = node.decorators.map(context.toNode);
 
     return {
       parameter,
+      accessibility: node.accessibility,
+      decorators,
+      override: node.override,
+      readonly: node.readonly,
+      static: node.static,
     };
   },
 
@@ -1975,9 +2061,7 @@ export function convert<T extends Deno.lint.Node>(
   source: string,
 ): ConvertResult<NodeMap[T["type"]]> {
   const map = new WeakMap<Deno.lint.Node, TSESTree.Node>();
-
   const lines = calcLineStarts(source);
-  const context = { toNode } satisfies Context;
 
   function toNode(node: Deno.lint.Node) {
     const target = {
@@ -1988,7 +2072,7 @@ export function convert<T extends Deno.lint.Node>(
 
     map.set(node, target);
 
-    const properties = definition[node.type](node, context);
+    const properties = definition[node.type](node, { toNode });
 
     Object.assign(target, properties);
 
