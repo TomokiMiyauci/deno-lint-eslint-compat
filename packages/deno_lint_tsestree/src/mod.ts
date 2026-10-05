@@ -645,7 +645,7 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.ExportNamedDeclaration> => {
     const attributes = node.attributes.map(context.toNode);
-    const declaration = context.toNode(node.declaration);
+    const declaration = node.declaration && context.toNode(node.declaration);
     const specifiers = node.specifiers.map(context.toNode);
     const source = node.source && context.toNode(node.source);
 
@@ -1502,7 +1502,7 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.CatchClause> => {
     const body = context.toNode(node.body);
-    const param = context.toNode(node.param);
+    const param = node.param && context.toNode(node.param);
 
     return {
       body,
@@ -1758,7 +1758,8 @@ const definition = {
   ): ExcludeBase<TSESTree.TSAbstractPropertyDefinition> => {
     const decorators = node.decorators.map(context.toNode);
     const key = context.toNode(node.key);
-    const typeAnnotation = context.toNode(node.typeAnnotation);
+    const typeAnnotation = node.typeAnnotation &&
+      context.toNode(node.typeAnnotation);
 
     return {
       accessibility: node.accessibility,
@@ -1780,9 +1781,10 @@ const definition = {
     node: Deno.lint.TSEmptyBodyFunctionExpression,
     context,
   ): ExcludeBase<TSESTree.TSEmptyBodyFunctionExpression> => {
-    const params = context.toNode(node.params);
-    const returnType = context.toNode(node.returnType);
-    const typeParameters = context.toNode(node.typeParameters);
+    const params = node.params.map(context.toNode);
+    const returnType = node.returnType && context.toNode(node.returnType);
+    const typeParameters = node.typeParameters &&
+      context.toNode(node.typeParameters);
 
     return {
       async: node.async,
@@ -1802,8 +1804,9 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSCallSignatureDeclaration> => {
     const params = node.params.map(context.toNode);
-    const returnType = context.toNode(node.returnType);
-    const typeParameters = context.toNode(node.typeParameters);
+    const returnType = node.returnType && context.toNode(node.returnType);
+    const typeParameters = node.typeParameters &&
+      context.toNode(node.typeParameters);
 
     return {
       params,
@@ -1926,7 +1929,8 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSIndexSignature> => {
     const parameters = node.parameters.map(context.toNode);
-    const typeAnnotation = context.toNode(node.typeAnnotation);
+    const typeAnnotation = node.typeAnnotation &&
+      context.toNode(node.typeAnnotation);
 
     return {
       parameters,
@@ -2048,7 +2052,7 @@ type Definition<T> = {
 };
 
 interface Context {
-  toNode: (node: any) => any;
+  toNode: (node: AllNode) => any;
 }
 
 interface ConvertResult<T> {
