@@ -9,7 +9,10 @@ const definition = {
     node: Deno.lint.Program,
     context,
   ): ExcludeBase<TSESTree.Program> => {
-    const body = node.body.map(context.toNode);
+    const body = node.body.map(context.toNode).map((node) => {
+      assertStatement(node);
+      return node;
+    });
     const comments = node.comments.map(context.toNode);
 
     return {
@@ -152,7 +155,10 @@ const definition = {
     node: Deno.lint.BlockStatement,
     context,
   ): ExcludeBase<TSESTree.BlockStatement> => {
-    const body = node.body.map(context.toNode);
+    const body = node.body.map(context.toNode).map((node) => {
+      assertStatement(node);
+      return node;
+    });
 
     return { body };
   },
@@ -618,6 +624,8 @@ const definition = {
     const exported = node.exported && context.toNode(node.exported);
     const source = context.toNode(node.source);
 
+    assertStringLiteral(source);
+
     return {
       attributes,
       exported,
@@ -650,6 +658,8 @@ const definition = {
     const specifiers = node.specifiers.map(context.toNode);
     const source = node.source && context.toNode(node.source);
 
+    if (source) assertStringLiteral(source);
+
     return {
       attributes,
       declaration,
@@ -680,6 +690,8 @@ const definition = {
     const left = context.toNode(node.left);
     const right = context.toNode(node.right);
 
+    assertStatement(body);
+
     return { body, left, right };
   },
 
@@ -691,6 +703,8 @@ const definition = {
     const left = context.toNode(node.left);
     const right = context.toNode(node.right);
 
+    assertStatement(body);
+
     return { body, await: node.await, left, right };
   },
 
@@ -699,9 +713,11 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.ForStatement> => {
     const body = context.toNode(node.body);
-    const init = node.init && context.toNode(node);
+    const init = node.init && context.toNode(node.init);
     const test = node.test && context.toNode(node.test);
     const update = node.update && context.toNode(node.update);
+
+    assertStatement(body);
 
     return { body, init: init ?? null, test, update };
   },
@@ -743,6 +759,9 @@ const definition = {
     const consequent = context.toNode(node.consequent);
     const test = context.toNode(node.test);
 
+    if (alternate) assertStatement(alternate);
+    assertStatement(consequent);
+
     return { alternate, consequent, test };
   },
 
@@ -753,6 +772,9 @@ const definition = {
     const attributes = node.attributes.map(context.toNode);
     const source = context.toNode(node.source);
     const specifiers = node.specifiers.map(context.toNode);
+
+    assertStringLiteral(source);
+
     return {
       attributes,
       source,
@@ -769,6 +791,8 @@ const definition = {
   ): ExcludeBase<TSESTree.LabeledStatement> => {
     const body = context.toNode(node.body);
     const label = context.toNode(node.label);
+
+    assertStatement(body);
 
     return { body, label };
   },
@@ -946,6 +970,8 @@ const definition = {
     const body = context.toNode(node.body);
     const test = context.toNode(node.test);
 
+    assertStatement(body);
+
     return { body, test };
   },
 
@@ -955,6 +981,8 @@ const definition = {
   ): ExcludeBase<TSESTree.WithStatement> => {
     const body = context.toNode(node.body);
     const object = context.toNode(node.object);
+
+    assertStatement(body);
 
     return { body, object };
   },
@@ -1388,6 +1416,9 @@ const definition = {
     const key = context.toNode(node.key);
     const value = context.toNode(node.value);
 
+    if (key.type === Type.Literal) assertStringLiteral(key);
+    assertStringLiteral(value);
+
     return { key, value };
   },
 
@@ -1396,6 +1427,8 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSExternalModuleReference> => {
     const expression = context.toNode(node.expression);
+
+    assertStringLiteral(expression);
 
     return { expression };
   },
@@ -1406,6 +1439,9 @@ const definition = {
   ): ExcludeBase<TSESTree.ExportSpecifier> => {
     const exported = context.toNode(node.exported);
     const local = context.toNode(node.local);
+
+    if (exported.type === Type.Literal) assertStringLiteral(exported);
+    if (local.type === Type.Literal) assertStringLiteral(local);
 
     return { exported, local, exportKind: node.exportKind };
   },
@@ -1442,7 +1478,10 @@ const definition = {
     node: Deno.lint.StaticBlock,
     context,
   ): ExcludeBase<TSESTree.StaticBlock> => {
-    const body = node.body.map(context.toNode);
+    const body = node.body.map(context.toNode).map((node) => {
+      assertStatement(node);
+      return node;
+    });
 
     return { body };
   },
@@ -1498,7 +1537,11 @@ const definition = {
     node: Deno.lint.SwitchCase,
     context,
   ): ExcludeBase<TSESTree.SwitchCase> => {
-    const consequent = node.consequent.map(context.toNode);
+    const consequent = node.consequent.map(context.toNode).map((node) => {
+      assertStatement(node);
+
+      return node;
+    });
     const test = node.test && context.toNode(node.test);
 
     return { consequent, test };
@@ -1724,7 +1767,11 @@ const definition = {
     node: Deno.lint.TSModuleBlock,
     context,
   ): ExcludeBase<TSESTree.TSModuleBlock> => {
-    const body = node.body.map(context.toNode);
+    const body = node.body.map(context.toNode).map((node) => {
+      assertStatement(node);
+
+      return node;
+    });
 
     return {
       body,
@@ -1864,6 +1911,8 @@ const definition = {
     const id = context.toNode(node.id);
     const initializer = node.initializer &&
       context.toNode(node.initializer);
+
+    if (id.type === Type.Literal) assertStringLiteral(id);
 
     return { id, initializer, computed: false };
   },
@@ -2066,7 +2115,7 @@ type Definition<T> = {
 };
 
 interface Context {
-  toNode: (node: AllNode) => any;
+  toNode: <T extends AllNode>(node: T) => NodeMap[T["type"]];
 }
 
 interface ConvertResult<T> {
@@ -2168,4 +2217,57 @@ function position(lines: readonly number[], offset: number): Position {
     line: line + 1,
     column: offset - lineStart,
   };
+}
+
+function createError(message?: string): Error {
+  return new Error(message ?? "invalid semantic");
+}
+
+function assertStringLiteral(
+  node: TSESTree.Literal,
+): asserts node is TSESTree.StringLiteral {
+  if (!isStringLiteral(node)) throw createError();
+}
+
+function isStringLiteral(
+  node: TSESTree.Literal,
+): node is TSESTree.StringLiteral {
+  if (typeof node.value === "string") {
+    return true;
+  }
+
+  return false;
+}
+
+type TsStatement = Extract<
+  TSESTree.Node,
+  { type: Deno.lint.Statement["type"] }
+>;
+
+function assertStatement(
+  node: TsStatement,
+): asserts node is Exclude<TSESTree.Statement, { type: "EmptyStatement" }> {
+  if (node.type === Type.ClassDeclaration) {
+    assertClassDeclarationWithName(node);
+  }
+
+  if (node.type === Type.FunctionDeclaration) {
+    assertFunctionDeclarationWithName(node);
+  }
+}
+
+function assertClassDeclarationWithName(
+  node: TSESTree.ClassDeclaration,
+): asserts node is TSESTree.ClassDeclarationWithName {
+  if (node.id === null) {
+    throw createError();
+  }
+}
+
+function assertFunctionDeclarationWithName(
+  node: TSESTree.FunctionDeclaration,
+): asserts node is TSESTree.FunctionDeclarationWithName {
+  if (node.id === null) {
+    throw createError();
+  }
 }
