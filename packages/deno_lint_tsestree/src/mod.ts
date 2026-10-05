@@ -47,6 +47,8 @@ const definition = {
       value,
       key,
       decorators,
+      typeAnnotation: undefined, // TODO
+      accessibility: node.accessibility,
     };
   },
 
@@ -317,13 +319,11 @@ const definition = {
 
   Literal: (
     node: Deno.lint.Literal,
-    context,
+    _,
   ): ExcludeBase<TSESTree.Literal> => {
     return {
-      ...node,
-
-      loc: {} as any,
-      parent: {} as any,
+      value: node.value,
+      raw: node.raw,
     };
   },
 
@@ -346,38 +346,14 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.MemberExpression> => {
     const object = context.toNode(node.object);
+    const property = context.toNode(node.property);
 
-    if (
-      node.computed &&
-      !(node.property.type === "Identifier" ||
-        node.property.type === "PrivateIdentifier")
-    ) {
-      const property = context.toNode(node.property);
-
-      return {
-        computed: node.computed,
-        object,
-        optional: node.optional,
-        property,
-      };
-    }
-
-    if (
-      !node.computed &&
-      (node.property.type === "Identifier" ||
-        node.property.type === "PrivateIdentifier")
-    ) {
-      const property = context.toNode(node.property);
-
-      return {
-        computed: node.computed,
-        object,
-        optional: node.optional,
-        property,
-      };
-    }
-
-    throw new Error("semantic error");
+    return {
+      computed: node.computed,
+      object,
+      optional: node.optional,
+      property,
+    };
   },
 
   MetaProperty: (
@@ -668,16 +644,18 @@ const definition = {
     node: Deno.lint.ExportNamedDeclaration,
     context,
   ): ExcludeBase<TSESTree.ExportNamedDeclaration> => {
-    throw new Error();
-
     const attributes = node.attributes.map(context.toNode);
     const declaration = context.toNode(node.declaration);
     const specifiers = node.specifiers.map(context.toNode);
+    const source = node.source && context.toNode(node.source);
 
     return {
       attributes,
       declaration,
       specifiers,
+      exportKind: node.exportKind,
+      source,
+      assertions: attributes,
     };
   },
 
@@ -687,19 +665,18 @@ const definition = {
   ): ExcludeBase<TSESTree.ExpressionStatement> => {
     const expression = context.toNode(node.expression);
 
-    return { expression };
+    return {
+      expression,
+      directive: undefined, // TODO
+    };
   },
 
   ForInStatement: (
     node: Deno.lint.ForInStatement,
     context,
   ): ExcludeBase<TSESTree.ForInStatement> => {
-    throw new Error();
-
     const body = context.toNode(node.body);
-    const left = node.left.type === "VariableDeclaration"
-      ? context.toNode(node.left)
-      : context.toNode(node.left);
+    const left = context.toNode(node.left);
     const right = context.toNode(node.right);
 
     return { body, left, right };
@@ -709,11 +686,8 @@ const definition = {
     node: Deno.lint.ForOfStatement,
     context,
   ): ExcludeBase<TSESTree.ForOfStatement> => {
-    throw new Error();
     const body = context.toNode(node.body);
-    const left = node.left.type === "VariableDeclaration"
-      ? context.toNode(node.left)
-      : context.toNode(node.left);
+    const left = context.toNode(node.left);
     const right = context.toNode(node.right);
 
     return { body, await: node.await, left, right };
@@ -723,7 +697,6 @@ const definition = {
     node: Deno.lint.ForStatement,
     context,
   ): ExcludeBase<TSESTree.ForStatement> => {
-    throw new Error();
     const body = context.toNode(node.body);
     const init = node.init && context.toNode(node);
     const test = node.test && context.toNode(node.test);
@@ -944,7 +917,7 @@ const definition = {
   ): ExcludeBase<TSESTree.VariableDeclaration> => {
     const declarations = node.declarations.map(context.toNode);
 
-    return { declarations, kind: node.kind };
+    return { declarations, kind: node.kind, declare: node.declare };
   },
 
   WhileStatement: (
@@ -1382,7 +1355,7 @@ const definition = {
     const exported = context.toNode(node.exported);
     const local = context.toNode(node.local);
 
-    return { exported, local };
+    return { exported, local, exportKind: node.exportKind };
   },
 
   VariableDeclarator: (
@@ -1392,7 +1365,7 @@ const definition = {
     const init = node.init && context.toNode(node.init);
     const id = context.toNode(node.id);
 
-    return { id, init };
+    return { id, init, definite: node.definite };
   },
 
   Decorator: (
@@ -1426,13 +1399,24 @@ const definition = {
     node: Deno.lint.PropertyDefinition,
     context,
   ): ExcludeBase<TSESTree.PropertyDefinition> => {
-    throw new Error();
     const key = context.toNode(node.key);
+    const decorators = node.decorators.map(context.toNode);
+    const typeAnnotation = node.typeAnnotation &&
+      context.toNode(node.typeAnnotation);
+    const value = node.value && context.toNode(node.value);
 
     return {
       computed: node.computed,
       key,
       static: node.static,
+      accessibility: node.accessibility,
+      declare: node.declare,
+      decorators,
+      optional: node.optional,
+      override: node.override,
+      readonly: node.readonly,
+      typeAnnotation,
+      value,
     };
   },
 
@@ -1451,6 +1435,9 @@ const definition = {
       static: node.static,
       value,
       decorators,
+      optional: node.optional,
+      override: node.override,
+      accessibility: node.accessibility,
     };
   },
 
@@ -1459,15 +1446,22 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.SwitchCase> => {
     const consequent = node.consequent.map(context.toNode);
+    const test = node.test && context.toNode(node.test);
 
-    return { consequent };
+    return { consequent, test };
   },
 
   CatchClause: (
     node: Deno.lint.CatchClause,
     context,
   ): ExcludeBase<TSESTree.CatchClause> => {
-    return {};
+    const body = context.toNode(node.body);
+    const param = context.toNode(node.param);
+
+    return {
+      body,
+      param,
+    };
   },
 
   TemplateElement: (
@@ -1497,7 +1491,12 @@ const definition = {
     const left = context.toNode(node.left);
     const right = context.toNode(node.right);
 
-    return { left, right };
+    return {
+      left,
+      right,
+      decorators: [], // TODO
+      typeAnnotation: undefined, // TODO
+    };
   },
 
   RestElement: (
@@ -1505,8 +1504,15 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.RestElement> => {
     const argument = context.toNode(node.argument);
+    const typeAnnotation = node.typeAnnotation &&
+      context.toNode(node.typeAnnotation);
 
-    return { argument };
+    return {
+      argument,
+      decorators: [], // TODO
+      typeAnnotation,
+      value: undefined, // TODO
+    };
   },
 
   SpreadElement: (
