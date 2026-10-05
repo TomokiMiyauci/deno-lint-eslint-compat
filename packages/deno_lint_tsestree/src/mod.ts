@@ -25,7 +25,7 @@ export function convert<T extends Deno.lint.Node>(
 
 type NodeConverter = {
   [k in keyof NodeMap]: (
-    node: Extract<Deno.lint.Node, { type: k }>,
+    node: Extract<AllNode, { type: k }>,
   ) => NodeMap[k];
 };
 
@@ -107,8 +107,8 @@ class Converter implements NodeConverter {
 
   Program(node: Deno.lint.Program): TSESTree.Program {
     return this.#register(node, () => {
-      const body = node.body.map(this.#Statement.bind(this));
-      const comments = node.comments.map(this.#Comment.bind(this));
+      const body = node.body.map(this.#Node.bind(this));
+      const comments = node.comments.map(this.#Node.bind(this));
 
       return {
         type: Type.Program,
@@ -129,7 +129,7 @@ class Converter implements NodeConverter {
           case "SpreadElement":
             return this.SpreadElement(child);
           default:
-            return this.#Expression(child);
+            return this.#Node(child);
         }
       });
 
@@ -211,7 +211,7 @@ class Converter implements NodeConverter {
         throw new Error();
       }
 
-      const params = node.params.map(this.#Parameter.bind(this));
+      const params = node.params.map(this.#Node.bind(this));
       const returnType = node.returnType &&
         this.TSTypeAnnotation(node.returnType);
       const typeParameters = node.typeParameters &&
@@ -236,7 +236,7 @@ class Converter implements NodeConverter {
         );
       }
 
-      const body = this.#Expression(node.body);
+      const body = this.#Node(node.body);
 
       return this.#createNode(
         {
@@ -259,8 +259,8 @@ class Converter implements NodeConverter {
     node: Deno.lint.AssignmentExpression,
   ): TSESTree.AssignmentExpression {
     return this.#register(node, () => {
-      const left = this.#Expression(node.left);
-      const right = this.#Expression(node.right);
+      const left = this.#Node(node.left);
+      const right = this.#Node(node.right);
 
       return this.#createNode({
         type: Type.AssignmentExpression,
@@ -272,7 +272,7 @@ class Converter implements NodeConverter {
   }
   AwaitExpression(node: Deno.lint.AwaitExpression): TSESTree.AwaitExpression {
     return this.#register(node, () => {
-      const argument = this.#Expression(node.argument);
+      const argument = this.#Node(node.argument);
 
       return this.#createNode({
         type: Type.AwaitExpression,
@@ -284,7 +284,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.BinaryExpression,
   ): TSESTree.BinaryExpression {
     return this.#register(node, () => {
-      const right = this.#Expression(node.right);
+      const right = this.#Node(node.right);
 
       if (node.operator === "in" && node.left.type === "PrivateIdentifier") {
         const left = this.PrivateIdentifier(node.left);
@@ -301,7 +301,7 @@ class Converter implements NodeConverter {
         throw new Error("semantic error");
       }
 
-      const left = this.#Expression(node.left);
+      const left = this.#Node(node.left);
 
       return this.#createNode({
         type: Type.BinaryExpression,
@@ -313,7 +313,7 @@ class Converter implements NodeConverter {
   }
   BlockStatement(node: Deno.lint.BlockStatement): TSESTree.BlockStatement {
     return this.#register(node, () => {
-      const body = node.body.map(this.#Statement.bind(this));
+      const body = node.body.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.BlockStatement,
@@ -335,9 +335,9 @@ class Converter implements NodeConverter {
   CallExpression(node: Deno.lint.CallExpression): TSESTree.CallExpression {
     return this.#register(node, () => {
       const $arguments = node.arguments.map(
-        this.#CallExpressionArgument.bind(this),
+        this.#Node.bind(this),
       );
-      const callee = this.#Expression(node.callee);
+      const callee = this.#Node(node.callee);
       const typeArguments = node.typeArguments &&
         this.TSTypeParameterInstantiation(node.typeArguments);
 
@@ -349,17 +349,6 @@ class Converter implements NodeConverter {
         typeArguments: typeArguments ?? undefined,
       }, node);
     });
-  }
-
-  #CallExpressionArgument(
-    node: Deno.lint.Expression | Deno.lint.SpreadElement,
-  ): TSESTree.CallExpressionArgument {
-    switch (node.type) {
-      case "SpreadElement":
-        return this.SpreadElement(node);
-      default:
-        return this.#Expression(node);
-    }
   }
 
   ChainExpression(node: Deno.lint.ChainExpression): TSESTree.ChainExpression {
@@ -391,7 +380,7 @@ class Converter implements NodeConverter {
       const $implements = node.implements.map(
         this.TSClassImplements.bind(this),
       );
-      const superClass = this.#SuperClass(node.superClass);
+      const superClass = node.superClass && this.#Node(node.superClass);
       const superTypeArguments = node.superTypeArguments &&
         this.TSTypeParameterInstantiation(node.superTypeArguments);
       const typeParameters = node.typeParameters &&
@@ -412,64 +401,13 @@ class Converter implements NodeConverter {
     });
   }
 
-  #SuperClass(node: Deno.lint.ClassExpression["superClass"]) {
-    if (node === null) return null;
-
-    switch (node.type) {
-      case "ArrayExpression":
-        return this.ArrayExpression(node);
-      case "ArrayPattern":
-        return this.ArrayPattern(node);
-      case "ArrowFunctionExpression":
-        return this.ArrowFunctionExpression(node);
-      case "CallExpression":
-        return this.CallExpression(node);
-      case "ClassExpression":
-        return this.ClassExpression(node);
-      case "FunctionExpression":
-        return this.FunctionExpression(node);
-      case "Identifier":
-        return this.Identifier(node);
-      case "JSXElement":
-        return this.JSXElement(node);
-      case "JSXFragment":
-        return this.JSXFragment(node);
-      case "Literal":
-        return this.Literal(node);
-      case "MemberExpression":
-        return this.MemberExpression(node);
-      case "MetaProperty":
-        return this.MetaProperty(node);
-      case "ObjectExpression":
-        return this.ObjectExpression(node);
-      case "ObjectPattern":
-        return this.ObjectPattern(node);
-      case "SequenceExpression":
-        return this.SequenceExpression(node);
-      case "Super":
-        return this.Super(node);
-      case "TaggedTemplateExpression":
-        return this.TaggedTemplateExpression(node);
-      case "TemplateLiteral":
-        return this.TemplateLiteral(node);
-      case "ThisExpression":
-        return this.ThisExpression(node);
-      case "TSAsExpression":
-        return this.TSAsExpression(node);
-      case "TSNonNullExpression":
-        return this.TSNonNullExpression(node);
-      case "TSTypeAssertion":
-        return this.TSTypeAssertion(node);
-    }
-  }
-
   ConditionalExpression(
     node: Deno.lint.ConditionalExpression,
   ): TSESTree.ConditionalExpression {
     return this.#register(node, () => {
-      const alternate = this.#Expression(node.alternate);
-      const consequent = this.#Expression(node.consequent);
-      const test = this.#Expression(node.test);
+      const alternate = this.#Node(node.alternate);
+      const consequent = this.#Node(node.consequent);
+      const test = this.#Node(node.test);
 
       return this.#createNode({
         type: Type.ConditionalExpression,
@@ -485,7 +423,7 @@ class Converter implements NodeConverter {
     return this.#register(node, () => {
       const body = this.BlockStatement(node.body);
       const id = node.id && this.Identifier(node.id);
-      const params = node.params.map(this.#Parameter.bind(this));
+      const params = node.params.map(this.#Node.bind(this));
       const returnType = node.returnType &&
         this.TSTypeAnnotation(node.returnType);
       const typeParameters = node.typeParameters &&
@@ -506,23 +444,6 @@ class Converter implements NodeConverter {
     });
   }
 
-  #Parameter(node: Deno.lint.Parameter): TSESTree.Parameter {
-    switch (node.type) {
-      case "ArrayPattern":
-        return this.ArrayPattern(node);
-      case "Identifier":
-        return this.Identifier(node);
-      case "ObjectPattern":
-        return this.ObjectPattern(node);
-      case "AssignmentPattern":
-        return this.AssignmentPattern(node);
-      case "RestElement":
-        return this.RestElement(node);
-      case "TSParameterProperty":
-        return this.TSParameterProperty(node);
-    }
-  }
-
   Identifier(node: Deno.lint.Identifier): TSESTree.Identifier {
     return this.#register(node, () => {
       const typeAnnotation = node.typeAnnotation &&
@@ -541,8 +462,8 @@ class Converter implements NodeConverter {
     node: Deno.lint.ImportExpression,
   ): TSESTree.ImportExpression {
     return this.#register(node, () => {
-      const source = this.#Expression(node.source);
-      const options = node.options && this.#Expression(node.options);
+      const source = this.#Node(node.source);
+      const options = node.options && this.#Node(node.options);
 
       return this.#createNode({
         type: Type.ImportExpression,
@@ -558,7 +479,7 @@ class Converter implements NodeConverter {
       const closingElement = node.closingElement &&
         this.JSXClosingElement(node.closingElement);
       const openingElement = this.JSXOpeningElement(node.openingElement);
-      const children = node.children.map(this.#JSXChild.bind(this));
+      const children = node.children.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.JSXElement,
@@ -569,24 +490,11 @@ class Converter implements NodeConverter {
     });
   }
 
-  #JSXChild(node: Deno.lint.JSXChild): TSESTree.JSXChild {
-    switch (node.type) {
-      case "JSXElement":
-        return this.JSXElement(node);
-      case "JSXFragment":
-        return this.JSXFragment(node);
-      case "JSXExpressionContainer":
-        return this.JSXExpressionContainer(node);
-      case "JSXText":
-        return this.JSXText(node);
-    }
-  }
-
   JSXFragment(node: Deno.lint.JSXFragment): TSESTree.JSXFragment {
     return this.#register(node, () => {
       const closingFragment = this.JSXClosingFragment(node.closingFragment);
       const openingFragment = this.JSXOpeningFragment(node.openingFragment);
-      const children = node.children.map(this.#JSXChild.bind(this));
+      const children = node.children.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.JSXFragment,
@@ -686,8 +594,8 @@ class Converter implements NodeConverter {
     node: Deno.lint.LogicalExpression,
   ): TSESTree.LogicalExpression {
     return this.#register(node, () => {
-      const left = this.#Expression(node.left);
-      const right = this.#Expression(node.right);
+      const left = this.#Node(node.left);
+      const right = this.#Node(node.right);
 
       return this.#createNode({
         type: Type.LogicalExpression,
@@ -701,14 +609,14 @@ class Converter implements NodeConverter {
     node: Deno.lint.MemberExpression,
   ): TSESTree.MemberExpression {
     return this.#register(node, () => {
-      const object = this.#Expression(node.object);
+      const object = this.#Node(node.object);
 
       if (
         node.computed &&
         !(node.property.type === "Identifier" ||
           node.property.type === "PrivateIdentifier")
       ) {
-        const property = this.#Expression(node.property);
+        const property = this.#Node(node.property);
 
         return this.#createNode({
           type: Type.MemberExpression,
@@ -780,10 +688,10 @@ class Converter implements NodeConverter {
         if (child.type === "SpreadElement") {
           return this.SpreadElement(child);
         }
-        return this.#Expression(child);
+        return this.#Node(child);
       });
 
-      const callee = this.#Expression(node.callee);
+      const callee = this.#Node(node.callee);
       const typeArguments = node.typeArguments &&
         this.TSTypeParameterInstantiation(node.typeArguments);
 
@@ -837,7 +745,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.SequenceExpression,
   ): TSESTree.SequenceExpression {
     return this.#register(node, () => {
-      const expressions = node.expressions.map(this.#Expression.bind(this));
+      const expressions = node.expressions.map(this.#Node.bind(this));
       return this.#createNode({
         type: Type.SequenceExpression,
         expressions,
@@ -857,7 +765,7 @@ class Converter implements NodeConverter {
   ): TSESTree.TaggedTemplateExpression {
     return this.#register(node, () => {
       const quasi = this.TemplateLiteral(node.quasi);
-      const tag = this.#Expression(node.tag);
+      const tag = this.#Node(node.tag);
       const typeArguments = node.typeArguments &&
         this.TSTypeParameterInstantiation(node.typeArguments);
 
@@ -871,7 +779,7 @@ class Converter implements NodeConverter {
   }
   TemplateLiteral(node: Deno.lint.TemplateLiteral): TSESTree.TemplateLiteral {
     return this.#register(node, () => {
-      const expressions = node.expressions.map(this.#Expression.bind(this));
+      const expressions = node.expressions.map(this.#Node.bind(this));
       const quasis = node.quasis.map(this.TemplateElement.bind(this));
 
       return this.#createNode({
@@ -890,8 +798,8 @@ class Converter implements NodeConverter {
   }
   TSAsExpression(node: Deno.lint.TSAsExpression): TSESTree.TSAsExpression {
     return this.#register(node, () => {
-      const expression = this.#Expression(node.expression);
-      const typeAnnotation = this.#TypeNode(node.typeAnnotation);
+      const expression = this.#Node(node.expression);
+      const typeAnnotation = this.#Node(node.typeAnnotation);
 
       return this.#createNode({
         type: Type.TSAsExpression,
@@ -904,7 +812,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSInstantiationExpression,
   ): TSESTree.TSInstantiationExpression {
     return this.#register(node, () => {
-      const expression = this.#Expression(node.expression);
+      const expression = this.#Node(node.expression);
       const typeArguments = this.TSTypeParameterInstantiation(
         node.typeArguments,
       );
@@ -920,7 +828,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSNonNullExpression,
   ): TSESTree.TSNonNullExpression {
     return this.#register(node, () => {
-      const expression = this.#Expression(node.expression);
+      const expression = this.#Node(node.expression);
 
       return this.#createNode({
         type: Type.TSNonNullExpression,
@@ -933,8 +841,8 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSSatisfiesExpression,
   ): TSESTree.TSSatisfiesExpression {
     return this.#register(node, () => {
-      const expression = this.#Expression(node.expression);
-      const typeAnnotation = this.#TypeNode(node.typeAnnotation);
+      const expression = this.#Node(node.expression);
+      const typeAnnotation = this.#Node(node.typeAnnotation);
 
       return this.#createNode({
         type: Type.TSSatisfiesExpression,
@@ -945,8 +853,8 @@ class Converter implements NodeConverter {
   }
   TSTypeAssertion(node: Deno.lint.TSTypeAssertion): TSESTree.TSTypeAssertion {
     return this.#register(node, () => {
-      const expression = this.#Expression(node.expression);
-      const typeAnnotation = this.#TypeNode(node.typeAnnotation);
+      const expression = this.#Node(node.expression);
+      const typeAnnotation = this.#Node(node.typeAnnotation);
 
       return this.#createNode({
         type: Type.TSTypeAssertion,
@@ -957,7 +865,7 @@ class Converter implements NodeConverter {
   }
   UnaryExpression(node: Deno.lint.UnaryExpression): TSESTree.UnaryExpression {
     return this.#register(node, () => {
-      const argument = this.#Expression(node.argument);
+      const argument = this.#Node(node.argument);
 
       return this.#createNode({
         type: Type.UnaryExpression,
@@ -972,7 +880,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.UpdateExpression,
   ): TSESTree.UpdateExpression {
     return this.#register(node, () => {
-      const argument = this.#Expression(node.argument);
+      const argument = this.#Node(node.argument);
 
       return this.#createNode({
         type: Type.UpdateExpression,
@@ -984,7 +892,7 @@ class Converter implements NodeConverter {
   }
   YieldExpression(node: Deno.lint.YieldExpression): TSESTree.YieldExpression {
     return this.#register(node, () => {
-      const argument = node.argument && this.#Expression(node.argument);
+      const argument = node.argument && this.#Node(node.argument);
 
       if (node.delegate) {
         if (!argument) throw new Error("semantic error");
@@ -1014,7 +922,7 @@ class Converter implements NodeConverter {
       const $implements = node.implements.map(
         this.TSClassImplements.bind(this),
       );
-      const superClass = this.#SuperClass(node.superClass);
+      const superClass = node.superClass && this.#Node(node.superClass);
 
       return this.#createNode({
         type: Type.ClassDeclaration,
@@ -1055,8 +963,8 @@ class Converter implements NodeConverter {
     node: Deno.lint.DoWhileStatement,
   ): TSESTree.DoWhileStatement {
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
-      const test = this.#Expression(node.test);
+      const body = this.#Node(node.body);
+      const test = this.#Node(node.test);
 
       return this.#createNode({
         type: Type.DoWhileStatement,
@@ -1089,7 +997,7 @@ class Converter implements NodeConverter {
     return this.#register(node, () => {
       if (node.exportKind === "type") throw new Error("semantic error");
 
-      const declaration = this.#DefaultExportDeclaration(node.declaration);
+      const declaration = this.#Node(node.declaration);
 
       return this.#createNode({
         type: Type.ExportDefaultDeclaration,
@@ -1136,11 +1044,11 @@ class Converter implements NodeConverter {
     throw new Error();
 
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
+      const body = this.#Node(node.body);
       const left = node.left.type === "VariableDeclaration"
         ? this.VariableDeclaration(node.left)
-        : this.#Expression(node.left);
-      const right = this.#Expression(node.right);
+        : this.#Node(node.left);
+      const right = this.#Node(node.right);
 
       return this.#createNode({
         type: Type.ForInStatement,
@@ -1153,11 +1061,11 @@ class Converter implements NodeConverter {
   ForOfStatement(node: Deno.lint.ForOfStatement): TSESTree.ForOfStatement {
     throw new Error();
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
+      const body = this.#Node(node.body);
       const left = node.left.type === "VariableDeclaration"
         ? this.VariableDeclaration(node.left)
-        : this.#Expression(node.left);
-      const right = this.#Expression(node.right);
+        : this.#Node(node.left);
+      const right = this.#Node(node.right);
 
       return this.#createNode({
         type: Type.ForOfStatement,
@@ -1171,17 +1079,17 @@ class Converter implements NodeConverter {
   ForStatement(node: Deno.lint.ForStatement): TSESTree.ForStatement {
     throw new Error();
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
+      const body = this.#Node(node.body);
       const init = node.init && map(node.init, (node) => {
         switch (node.type) {
           case "VariableDeclaration":
             return this.VariableDeclaration(node);
           default:
-            return this.#Expression(node);
+            return this.#Node(node);
         }
       });
-      const test = node.test && this.#Expression(node.test);
-      const update = node.update && this.#Expression(node.update);
+      const test = node.test && this.#Node(node.test);
+      const update = node.update && this.#Node(node.update);
 
       return this.#createNode({
         type: Type.ForStatement,
@@ -1202,7 +1110,7 @@ class Converter implements NodeConverter {
       const body = this.BlockStatement(node.body);
       if (!node.id) throw new Error();
       const id = this.Identifier(node.id);
-      const params = node.params.map(this.#Parameter.bind(this));
+      const params = node.params.map(this.#Node.bind(this));
       const returnType = node.returnType &&
         this.TSTypeAnnotation(node.returnType);
       const typeParameters = node.typeParameters &&
@@ -1224,9 +1132,9 @@ class Converter implements NodeConverter {
   }
   IfStatement(node: Deno.lint.IfStatement): TSESTree.IfStatement {
     return this.#register(node, () => {
-      const alternate = node.alternate && this.#Statement(node.alternate);
-      const consequent = this.#Statement(node.consequent);
-      const test = this.#Expression(node.test);
+      const alternate = node.alternate && this.#Node(node.alternate);
+      const consequent = this.#Node(node.consequent);
+      const test = this.#Node(node.test);
 
       return this.#createNode({
         type: Type.IfStatement,
@@ -1267,7 +1175,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.LabeledStatement,
   ): TSESTree.LabeledStatement {
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
+      const body = this.#Node(node.body);
       const label = this.Identifier(node.label);
 
       return this.#createNode({
@@ -1279,7 +1187,7 @@ class Converter implements NodeConverter {
   }
   ReturnStatement(node: Deno.lint.ReturnStatement): TSESTree.ReturnStatement {
     return this.#register(node, () => {
-      const argument = node.argument && this.#Expression(node.argument);
+      const argument = node.argument && this.#Node(node.argument);
 
       return this.#createNode({
         type: Type.ReturnStatement,
@@ -1291,7 +1199,7 @@ class Converter implements NodeConverter {
   SwitchStatement(node: Deno.lint.SwitchStatement): TSESTree.SwitchStatement {
     return this.#register(node, () => {
       const cases = node.cases.map(this.SwitchCase.bind(this));
-      const discriminant = this.#Expression(node.discriminant);
+      const discriminant = this.#Node(node.discriminant);
 
       return this.#createNode({
         type: Type.SwitchStatement,
@@ -1302,7 +1210,7 @@ class Converter implements NodeConverter {
   }
   ThrowStatement(node: Deno.lint.ThrowStatement): TSESTree.ThrowStatement {
     return this.#register(node, () => {
-      const argument = this.#Expression(node.argument);
+      const argument = this.#Node(node.argument);
 
       return this.#createNode({
         type: Type.ThrowStatement,
@@ -1357,7 +1265,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSExportAssignment,
   ): TSESTree.TSExportAssignment {
     return this.#register(node, () => {
-      const expression = this.#Expression(node.expression);
+      const expression = this.#Node(node.expression);
 
       return this.#createNode({
         type: Type.TSExportAssignment,
@@ -1421,7 +1329,7 @@ class Converter implements NodeConverter {
   ): TSESTree.TSTypeAliasDeclaration {
     return this.#register(node, () => {
       const id = this.Identifier(node.id);
-      const typeAnnotation = this.#TypeNode(node.typeAnnotation);
+      const typeAnnotation = this.#Node(node.typeAnnotation);
       const typeParameters = node.typeParameters &&
         this.TSTypeParameterDeclaration(node.typeParameters);
 
@@ -1451,8 +1359,8 @@ class Converter implements NodeConverter {
   }
   WhileStatement(node: Deno.lint.WhileStatement): TSESTree.WhileStatement {
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
-      const test = this.#Expression(node.test);
+      const body = this.#Node(node.body);
+      const test = this.#Node(node.test);
 
       return this.#createNode({
         type: Type.WhileStatement,
@@ -1463,8 +1371,8 @@ class Converter implements NodeConverter {
   }
   WithStatement(node: Deno.lint.WithStatement): TSESTree.WithStatement {
     return this.#register(node, () => {
-      const body = this.#Statement(node.body);
-      const object = this.#Expression(node.object);
+      const body = this.#Node(node.body);
+      const object = this.#Node(node.object);
 
       return this.#createNode({
         type: Type.WithStatement,
@@ -1482,7 +1390,7 @@ class Converter implements NodeConverter {
   }
   TSArrayType(node: Deno.lint.TSArrayType): TSESTree.TSArrayType {
     return this.#register(node, () => {
-      const elementType = this.#TypeNode(node.elementType);
+      const elementType = this.#Node(node.elementType);
 
       return this.#createNode({
         type: Type.TSArrayType,
@@ -1511,10 +1419,10 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSConditionalType,
   ): TSESTree.TSConditionalType {
     return this.#register(node, () => {
-      const checkType = this.#TypeNode(node.checkType);
-      const extendsType = this.#TypeNode(node.extendsType);
-      const falseType = this.#TypeNode(node.falseType);
-      const trueType = this.#TypeNode(node.trueType);
+      const checkType = this.#Node(node.checkType);
+      const extendsType = this.#Node(node.extendsType);
+      const falseType = this.#Node(node.falseType);
+      const trueType = this.#Node(node.trueType);
 
       return this.#createNode({
         type: Type.TSConditionalType,
@@ -1527,7 +1435,7 @@ class Converter implements NodeConverter {
   }
   TSFunctionType(node: Deno.lint.TSFunctionType): TSESTree.TSFunctionType {
     return this.#register(node, () => {
-      const params = node.params.map(this.#Parameter.bind(this));
+      const params = node.params.map(this.#Node.bind(this));
       const returnType = node.returnType &&
         this.TSTypeAnnotation(node.returnType);
       const typeParameters = node.typeParameters &&
@@ -1544,7 +1452,7 @@ class Converter implements NodeConverter {
   TSImportType(node: Deno.lint.TSImportType): TSESTree.TSImportType {
     throw new Error();
     return this.#register(node, () => {
-      const argument = this.#TypeNode(node.argument);
+      const argument = this.#Node(node.argument);
       const qualifier = node.qualifier && this.#EntityName(node.qualifier);
       const typeArguments = node.typeArguments &&
         this.TSTypeParameterInstantiation(node.typeArguments);
@@ -1578,8 +1486,8 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSIndexedAccessType,
   ): TSESTree.TSIndexedAccessType {
     return this.#register(node, () => {
-      const indexType = this.#TypeNode(node.indexType);
-      const objectType = this.#TypeNode(node.objectType);
+      const indexType = this.#Node(node.indexType);
+      const objectType = this.#Node(node.objectType);
 
       return this.#createNode({
         type: Type.TSIndexedAccessType,
@@ -1603,7 +1511,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSIntersectionType,
   ): TSESTree.TSIntersectionType {
     return this.#register(node, () => {
-      const types = node.types.map(this.#TypeNode.bind(this));
+      const types = node.types.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.TSIntersectionType,
@@ -2065,7 +1973,7 @@ class Converter implements NodeConverter {
   }
   StaticBlock(node: Deno.lint.StaticBlock): TSESTree.StaticBlock {
     return this.#register(node, () => {
-      const body = node.body.map(this.#Statement.bind(this));
+      const body = node.body.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.StaticBlock,
@@ -2083,7 +1991,7 @@ class Converter implements NodeConverter {
           return this.PrivateIdentifier(child);
         }
 
-        return this.#Expression(child);
+        return this.#Node(child);
       });
 
       return this.#createNode({
@@ -2103,7 +2011,7 @@ class Converter implements NodeConverter {
           return this.PrivateIdentifier(child);
         }
 
-        return this.#Expression(child);
+        return this.#Node(child);
       });
       const value = map(node.value, (child) => {
         switch (child.type) {
@@ -2128,7 +2036,7 @@ class Converter implements NodeConverter {
   }
   SwitchCase(node: Deno.lint.SwitchCase): TSESTree.SwitchCase {
     return this.#register(node, () => {
-      const consequent = node.consequent.map(this.#Statement.bind(this));
+      const consequent = node.consequent.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.SwitchCase,
@@ -2174,7 +2082,7 @@ class Converter implements NodeConverter {
         : node.left.type === "Identifier"
         ? this.Identifier(node.left)
         : this.ObjectPattern(node.left);
-      const right = this.#Expression(node.right);
+      const right = this.#Node(node.right);
 
       return this.#createNode({
         type: Type.AssignmentPattern,
@@ -2210,7 +2118,7 @@ class Converter implements NodeConverter {
   }
   SpreadElement(node: Deno.lint.SpreadElement): TSESTree.SpreadElement {
     return this.#register(node, () => {
-      const argument = this.#Expression(node.argument);
+      const argument = this.#Node(node.argument);
 
       return this.#createNode({
         type: Type.SpreadElement,
@@ -2220,7 +2128,7 @@ class Converter implements NodeConverter {
   }
   Property(node: Deno.lint.Property): TSESTree.Property {
     return this.#register(node, () => {
-      const key = this.#Expression(node.key);
+      const key = this.#Node(node.key);
       const value = map(node.value, (child) => {
         switch (child.type) {
           case "AssignmentPattern":
@@ -2228,7 +2136,7 @@ class Converter implements NodeConverter {
           case "TSEmptyBodyFunctionExpression":
             return this.TSEmptyBodyFunctionExpression(child);
           default:
-            return this.#Expression(child);
+            return this.#Node(child);
         }
       });
 
@@ -2471,8 +2379,6 @@ class Converter implements NodeConverter {
     });
   }
 
-  #C<T extends Deno.lint.Node>(node: T): NodeMap[T["type"]] {}
-
   TSEnumBody(node: Deno.lint.TSEnumBody): TSESTree.TSEnumBody {
     return this.#register(node, () => {
       const members = node.members.map(this.TSEnumMember.bind(this));
@@ -2495,7 +2401,7 @@ class Converter implements NodeConverter {
         }
       });
       const initializer = node.initializer &&
-        this.#Expression(node.initializer);
+        this.#Node(node.initializer);
 
       return this.#createNode({
         type: Type.TSEnumMember,
@@ -2574,7 +2480,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSConstructSignatureDeclaration,
   ): TSESTree.TSConstructSignatureDeclaration {
     return this.#register(node, () => {
-      const params = node.params.map(this.#Parameter.bind(this));
+      const params = node.params.map(this.#Node.bind(this));
       const returnType = this.TSTypeAnnotation(node.returnType);
       const typeParameters = node.typeParameters &&
         this.TSTypeParameterDeclaration(node.typeParameters);
@@ -2591,7 +2497,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSMethodSignature,
   ): TSESTree.TSMethodSignature {
     return this.#register(node, () => {
-      const params = node.params.map(this.#Parameter.bind(this));
+      const params = node.params.map(this.#Node.bind(this));
       const returnType = node.returnType &&
         this.TSTypeAnnotation(node.returnType);
       const typeParameters = node.typeParameters &&
@@ -2633,7 +2539,7 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSIndexSignature,
   ): TSESTree.TSIndexSignature {
     return this.#register(node, () => {
-      const parameters = node.parameters.map(this.#Parameter.bind(this));
+      const parameters = node.parameters.map(this.#Node.bind(this));
 
       return this.#createNode({
         type: Type.TSIndexSignature,
@@ -2692,32 +2598,13 @@ class Converter implements NodeConverter {
     node: Deno.lint.TSParameterProperty,
   ): TSESTree.TSParameterProperty {
     return this.#register(node, () => {
-      const parameter = this.#ParameterPropertyParameter(node.parameter);
+      const parameter = this.#Node(node.parameter);
 
       return {
         type: Type.TSParameterProperty,
         parameter,
       };
     });
-  }
-
-  #ParameterPropertyParameter(
-    node: Deno.lint.Parameter,
-  ): TSESTree.TSParameterProperty["parameter"] {
-    switch (node.type) {
-      case "AssignmentPattern":
-        return this.AssignmentPattern(node);
-      case "ArrayPattern":
-        return this.ArrayPattern(node);
-      case "ObjectPattern":
-        return this.ObjectPattern(node);
-      case "Identifier":
-        return this.Identifier(node);
-      case "RestElement":
-        return this.RestElement(node);
-      case "TSParameterProperty":
-        return this.TSParameterProperty(node);
-    }
   }
 
   Line(node: Deno.lint.LineComment): TSESTree.LineComment {
@@ -2733,18 +2620,10 @@ class Converter implements NodeConverter {
       value: node.value,
     };
   }
-  #Comment(
-    node: Deno.lint.LineComment | Deno.lint.BlockComment,
-  ): TSESTree.Comment {
-    switch (node.type) {
-      case "Line":
-        return this.Line(node);
-      case "Block":
-        return this.Block(node);
-    }
-  }
 
-  #Node<T extends Deno.lint.Node>(node: T): NodeMap[T["type"]] {
+  #Node<T extends Deno.lint.Node | Deno.lint.TSParameterProperty>(
+    node: T,
+  ): NodeMap[T["type"]] {
     switch (node.type) {
       case "Program":
         return this.Program(node);
@@ -3056,318 +2935,8 @@ class Converter implements NodeConverter {
         return this.Line(node);
       case "Block":
         return this.Block(node);
-    }
-  }
-
-  #Statement(node: Deno.lint.Statement): TSESTree.Statement {
-    switch (node.type) {
-      case "BlockStatement":
-        return this.BlockStatement(node);
-      case "BreakStatement":
-        return this.BreakStatement(node);
-      case "ClassDeclaration":
-        return this.ClassDeclaration(node);
-      case "ContinueStatement":
-        return this.ContinueStatement(node);
-      case "DebuggerStatement":
-        return this.DebuggerStatement(node);
-      case "DoWhileStatement":
-        return this.DoWhileStatement(node);
-      case "ExportAllDeclaration":
-        return this.ExportAllDeclaration(node);
-      case "ExportDefaultDeclaration":
-        return this.ExportDefaultDeclaration(node);
-      case "ExportNamedDeclaration":
-        return this.ExportNamedDeclaration(node);
-      case "ExpressionStatement":
-        return this.ExpressionStatement(node);
-      case "ForInStatement":
-        return this.ForInStatement(node);
-      case "ForOfStatement":
-        return this.ForOfStatement(node);
-      case "ForStatement":
-        return this.ForStatement(node);
-      case "FunctionDeclaration":
-        return this.FunctionDeclaration(node);
-      case "IfStatement":
-        return this.IfStatement(node);
-      case "ImportDeclaration":
-        return this.ImportDeclaration(node);
-      case "LabeledStatement":
-        return this.LabeledStatement(node);
-      case "ReturnStatement":
-        return this.ReturnStatement(node);
-      case "SwitchStatement":
-        return this.SwitchStatement(node);
-      case "ThrowStatement":
-        return this.ThrowStatement(node);
-      case "TryStatement":
-        return this.TryStatement(node);
-      case "TSDeclareFunction":
-        return this.TSDeclareFunction(node);
-      case "TSEnumDeclaration":
-        return this.TSEnumDeclaration(node);
-      case "TSExportAssignment":
-        return this.TSExportAssignment(node);
-      case "TSImportEqualsDeclaration":
-        return this.TSImportEqualsDeclaration(node);
-      case "TSInterfaceDeclaration":
-        return this.TSInterfaceDeclaration(node);
-      case "TSModuleDeclaration":
-        return this.TSModuleDeclaration(node);
-      case "TSNamespaceExportDeclaration":
-        return this.TSNamespaceExportDeclaration(node);
-      case "TSTypeAliasDeclaration":
-        return this.TSTypeAliasDeclaration(node);
-      case "VariableDeclaration":
-        return this.VariableDeclaration(node);
-      case "WhileStatement":
-        return this.WhileStatement(node);
-      case "WithStatement":
-        return this.WithStatement(node);
-    }
-  }
-
-  #Expression(node: Deno.lint.Expression): TSESTree.Expression {
-    switch (node.type) {
-      case "ArrayExpression":
-        return this.ArrayExpression(node);
-      case "ArrayPattern":
-        return this.ArrayPattern(node);
-      case "ArrowFunctionExpression":
-        return this.ArrowFunctionExpression(node);
-      case "AssignmentExpression":
-        return this.AssignmentExpression(node);
-      case "AwaitExpression":
-        return this.AwaitExpression(node);
-      case "BinaryExpression":
-        return this.BinaryExpression(node);
-      case "CallExpression":
-        return this.CallExpression(node);
-      case "ChainExpression":
-        return this.ChainExpression(node);
-      case "ClassExpression":
-        return this.ClassExpression(node);
-      case "ConditionalExpression":
-        return this.ConditionalExpression(node);
-      case "FunctionExpression":
-        return this.FunctionExpression(node);
-      case "Identifier":
-        return this.Identifier(node);
-      case "ImportExpression":
-        return this.ImportExpression(node);
-      case "JSXElement":
-        return this.JSXElement(node);
-      case "JSXFragment":
-        return this.JSXFragment(node);
-      case "Literal":
-        return this.Literal(node);
-      case "TemplateLiteral":
-        return this.TemplateLiteral(node);
-      case "LogicalExpression":
-        return this.LogicalExpression(node);
-      case "MemberExpression":
-        return this.MemberExpression(node);
-      case "MetaProperty":
-        return this.MetaProperty(node);
-      case "NewExpression":
-        return this.NewExpression(node);
-      case "ObjectExpression":
-        return this.ObjectExpression(node);
-      case "ObjectPattern":
-        return this.ObjectPattern(node);
-      case "SequenceExpression":
-        return this.SequenceExpression(node);
-      case "Super":
-        return this.Super(node);
-      case "TaggedTemplateExpression":
-        return this.TaggedTemplateExpression(node);
-      case "ThisExpression":
-        return this.ThisExpression(node);
-      case "TSAsExpression":
-        return this.TSAsExpression(node);
-      case "TSInstantiationExpression":
-        return this.TSInstantiationExpression(node);
-      case "TSNonNullExpression":
-        return this.TSNonNullExpression(node);
-      case "TSSatisfiesExpression":
-        return this.TSSatisfiesExpression(node);
-      case "TSTypeAssertion":
-        return this.TSTypeAssertion(node);
-      case "UnaryExpression":
-        return this.UnaryExpression(node);
-      case "UpdateExpression":
-        return this.UpdateExpression(node);
-      case "YieldExpression":
-        return this.YieldExpression(node);
-    }
-  }
-
-  #TypeNode(node: Deno.lint.TypeNode): TSESTree.TypeNode {
-    switch (node.type) {
-      case "TSAnyKeyword":
-        return this.TSAnyKeyword(node);
-      case "TSArrayType":
-        return this.TSArrayType(node);
-      case "TSBigIntKeyword":
-        return this.TSBigIntKeyword(node);
-      case "TSBooleanKeyword":
-        return this.TSBooleanKeyword(node);
-      case "TSConditionalType":
-        return this.TSConditionalType(node);
-      case "TSFunctionType":
-        return this.TSFunctionType(node);
-      case "TSImportType":
-        return this.TSImportType(node);
-      case "TSIndexedAccessType":
-        return this.TSIndexedAccessType(node);
-      case "TSInferType":
-        return this.TSInferType(node);
-      case "TSIntersectionType":
-        return this.TSIntersectionType(node);
-      case "TSIntrinsicKeyword":
-        return this.TSIntrinsicKeyword(node);
-      case "TSLiteralType":
-        return this.TSLiteralType(node);
-      case "TSMappedType":
-        return this.TSMappedType(node);
-      case "TSNamedTupleMember":
-        return this.TSNamedTupleMember(node);
-      case "TSNeverKeyword":
-        return this.TSNeverKeyword(node);
-      case "TSNullKeyword":
-        return this.TSNullKeyword(node);
-      case "TSNumberKeyword":
-        return this.TSNumberKeyword(node);
-      case "TSObjectKeyword":
-        return this.TSObjectKeyword(node);
-      case "TSOptionalType":
-        return this.TSOptionalType(node);
-      case "TSQualifiedName":
-        return this.TSQualifiedName(node);
-      case "TSRestType":
-        return this.TSRestType(node);
-      case "TSStringKeyword":
-        return this.TSStringKeyword(node);
-      case "TSSymbolKeyword":
-        return this.TSSymbolKeyword(node);
-      case "TSTemplateLiteralType":
-        return this.TSTemplateLiteralType(node);
-      case "TSThisType":
-        return this.TSThisType(node);
-      case "TSTupleType":
-        return this.TSTupleType(node);
-      case "TSTypeLiteral":
-        return this.TSTypeLiteral(node);
-      case "TSTypeOperator":
-        return this.TSTypeOperator(node);
-      case "TSTypePredicate":
-        return this.TSTypePredicate(node);
-      case "TSTypeQuery":
-        return this.TSTypeQuery(node);
-      case "TSTypeReference":
-        return this.TSTypeReference(node);
-      case "TSUndefinedKeyword":
-        return this.TSUndefinedKeyword(node);
-      case "TSUnionType":
-        return this.TSUnionType(node);
-      case "TSUnknownKeyword":
-        return this.TSUnknownKeyword(node);
-      case "TSVoidKeyword":
-        return this.TSVoidKeyword(node);
-    }
-  }
-
-  #DefaultExportDeclaration(
-    node: Deno.lint.ExportDefaultDeclaration["declaration"],
-  ): TSESTree.DefaultExportDeclarations {
-    switch (node.type) {
-      case "ClassDeclaration":
-        return this.ClassDeclaration(node);
-      case "ArrayExpression":
-        return this.ArrayExpression(node);
-      case "ArrayPattern":
-        return this.ArrayPattern(node);
-      case "ArrowFunctionExpression":
-        return this.ArrowFunctionExpression(node);
-      case "AssignmentExpression":
-        return this.AssignmentExpression(node);
-      case "AwaitExpression":
-        return this.AwaitExpression(node);
-      case "BinaryExpression":
-        return this.BinaryExpression(node);
-      case "CallExpression":
-        return this.CallExpression(node);
-      case "ChainExpression":
-        return this.ChainExpression(node);
-      case "ClassExpression":
-        return this.ClassExpression(node);
-      case "ConditionalExpression":
-        return this.ConditionalExpression(node);
-      case "FunctionExpression":
-        return this.FunctionExpression(node);
-      case "Identifier":
-        return this.Identifier(node);
-      case "ImportExpression":
-        return this.ImportExpression(node);
-      case "JSXElement":
-        return this.JSXElement(node);
-      case "JSXFragment":
-        return this.JSXFragment(node);
-      case "Literal":
-        return this.Literal(node);
-      case "TemplateLiteral":
-        return this.TemplateLiteral(node);
-      case "LogicalExpression":
-        return this.LogicalExpression(node);
-      case "MemberExpression":
-        return this.MemberExpression(node);
-      case "MetaProperty":
-        return this.MetaProperty(node);
-      case "NewExpression":
-        return this.NewExpression(node);
-      case "ObjectExpression":
-        return this.ObjectExpression(node);
-      case "ObjectPattern":
-        return this.ObjectPattern(node);
-      case "SequenceExpression":
-        return this.SequenceExpression(node);
-      case "Super":
-        return this.Super(node);
-      case "TaggedTemplateExpression":
-        return this.TaggedTemplateExpression(node);
-      case "ThisExpression":
-        return this.ThisExpression(node);
-      case "TSAsExpression":
-        return this.TSAsExpression(node);
-      case "TSInstantiationExpression":
-        return this.TSInstantiationExpression(node);
-      case "TSNonNullExpression":
-        return this.TSNonNullExpression(node);
-      case "TSSatisfiesExpression":
-        return this.TSSatisfiesExpression(node);
-      case "TSTypeAssertion":
-        return this.TSTypeAssertion(node);
-      case "UnaryExpression":
-        return this.UnaryExpression(node);
-      case "UpdateExpression":
-        return this.UpdateExpression(node);
-      case "YieldExpression":
-        return this.YieldExpression(node);
-      case "FunctionDeclaration":
-        return this.FunctionDeclaration(node);
-      case "TSDeclareFunction":
-        return this.TSDeclareFunction(node);
-      case "TSEnumDeclaration":
-        return this.TSEnumDeclaration(node);
-      case "TSInterfaceDeclaration":
-        return this.TSInterfaceDeclaration(node);
-      case "TSModuleDeclaration":
-        return this.TSModuleDeclaration(node);
-      case "TSTypeAliasDeclaration":
-        return this.TSTypeAliasDeclaration(node);
-      case "VariableDeclaration":
-        return this.VariableDeclaration(node);
+      case "TSParameterProperty":
+        return this.TSParameterProperty(node);
     }
   }
 }
@@ -3376,11 +2945,18 @@ function map<T, U>(value: T, mapper: (value: T) => U) {
   return mapper(value);
 }
 
+type AllNode = Deno.lint.Node | Deno.lint.TSParameterProperty; // TSParameterProperty is not Node yet
+
 type WithoutComment = Exclude<
-  Deno.lint.Node,
+  AllNode,
   Deno.lint.LineComment | Deno.lint.BlockComment
 >;
 
+interface TokenNodeMap {
+  Line: TSESTree.LineComment;
+  Block: TSESTree.BlockComment;
+}
+
 type NodeMap =
   & { [k in WithoutComment["type"]]: Extract<TSESTree.Node, { type: k }> }
-  & { Line: TSESTree.LineComment; Block: TSESTree.BlockComment };
+  & TokenNodeMap;
