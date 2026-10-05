@@ -4,6 +4,8 @@ import {
   TSESTree,
 } from "@typescript-eslint/types";
 
+export { TSESTree } from "@typescript-eslint/types";
+
 interface ConvertResult<T> {
   map: WeakMap<Deno.lint.Node, TSESTree.Node>;
   node: T;
@@ -959,11 +961,26 @@ class Converter implements NodeConverter {
       }, node);
     });
   }
+
   DoWhileStatement(
     node: Deno.lint.DoWhileStatement,
   ): TSESTree.DoWhileStatement {
     return this.#register(node, () => {
       const body = this.#Node(node.body);
+
+      if (
+        body.type === Type.ClassDeclaration && !isClassDeclarationWithName(body)
+      ) {
+        throw new Error();
+      }
+
+      if (
+        body.type === Type.FunctionDeclaration &&
+        !isFunctionDeclarationWithName(body)
+      ) {
+        throw new Error();
+      }
+
       const test = this.#Node(node.test);
 
       return this.#createNode({
@@ -2621,7 +2638,7 @@ class Converter implements NodeConverter {
     };
   }
 
-  #Node<T extends Deno.lint.Node | Deno.lint.TSParameterProperty>(
+  #Node<T extends AllNode>(
     node: T,
   ): NodeMap[T["type"]] {
     switch (node.type) {
@@ -2960,3 +2977,15 @@ interface TokenNodeMap {
 type NodeMap =
   & { [k in WithoutComment["type"]]: Extract<TSESTree.Node, { type: k }> }
   & TokenNodeMap;
+
+function isClassDeclarationWithName(
+  node: TSESTree.ClassDeclaration,
+): node is TSESTree.ClassDeclarationWithName {
+  return node.id !== null;
+}
+
+function isFunctionDeclarationWithName(
+  node: TSESTree.FunctionDeclaration,
+): node is TSESTree.FunctionDeclarationWithName {
+  return node.id !== null;
+}
