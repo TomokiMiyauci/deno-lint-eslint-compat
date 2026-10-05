@@ -16,7 +16,7 @@ const definition = {
       body,
       sourceType: node.sourceType,
       comments,
-      tokens: undefined,
+      tokens: undefined, // TODO,
     };
   },
 
@@ -49,6 +49,7 @@ const definition = {
       decorators,
       typeAnnotation: undefined, // TODO
       accessibility: node.accessibility,
+      definite: false, // TODO
     };
   },
 
@@ -815,6 +816,10 @@ const definition = {
     node: Deno.lint.TSDeclareFunction,
     context,
   ): ExcludeBase<TSESTree.TSDeclareFunction> => {
+    if (node.generator) {
+      throw new Error("semantic error");
+    }
+
     const id = node.id && context.toNode(node.id);
     const params = node.params.map(context.toNode);
     const returnType = node.returnType && context.toNode(node.returnType);
@@ -1027,6 +1032,7 @@ const definition = {
       argument,
       qualifier,
       typeArguments,
+      options: null, // TODO
     };
   },
 
@@ -1463,6 +1469,7 @@ const definition = {
       readonly: node.readonly,
       typeAnnotation,
       value,
+      definite: false, // TODO
     };
   },
 
@@ -1542,6 +1549,7 @@ const definition = {
       right,
       decorators: [], // TODO
       typeAnnotation: undefined, // TODO
+      optional: false, // TODO
     };
   },
 
@@ -1558,6 +1566,7 @@ const definition = {
       decorators: [], // TODO
       typeAnnotation,
       value: undefined, // TODO
+      optional: false, // TODO
     };
   },
 
@@ -1584,6 +1593,7 @@ const definition = {
       method: node.method,
       shorthand: node.shorthand,
       value,
+      optional: false, // TODO
     };
   },
 
@@ -1756,6 +1766,10 @@ const definition = {
     node: Deno.lint.TSAbstractPropertyDefinition,
     context,
   ): ExcludeBase<TSESTree.TSAbstractPropertyDefinition> => {
+    if (node.value !== null) {
+      throw new Error("semantic error");
+    }
+
     const decorators = node.decorators.map(context.toNode);
     const key = context.toNode(node.key);
     const typeAnnotation = node.typeAnnotation &&
