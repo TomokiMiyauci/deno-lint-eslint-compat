@@ -1,26 +1,27 @@
 import * as eslint from "eslint";
-import * as deno2estree from "@miyauci/deno-lint-estree";
+import * as deno2estree from "@miyauci/deno-lint-tsestree";
 import * as Eslint2Deno from "./eslint.ts";
 import * as estree from "estree";
-import { analyze } from "eslint-scope";
-import { traverse } from "estraverse";
+import { SourceCode } from "@typescript-eslint/utils/ts-eslint";
+import type { Cache } from "./type.ts";
+import { analyze } from "@typescript-eslint/scope-manager";
+import { visitorKeys } from "@typescript-eslint/visitor-keys";
 
 export function toRuleContext(
   context: Deno.lint.RuleContext,
-  mapper: deno2estree.Mapper,
+  node: SourceCode.Program,
 ): eslint.Rule.RuleContext {
   const { filename, id } = context;
-  const sourceCode = toSourceCode(context.sourceCode, mapper);
+  const text = context.sourceCode.text;
+
+  const sourceCode = toSourceCode(node, text);
 
   return {
     filename,
     sourceCode,
     id,
     report(descriptor) {
-      const reportData = Eslint2Deno.toReportData(
-        descriptor,
-        context.sourceCode.text,
-      );
+      const reportData = Eslint2Deno.toReportData(descriptor, text);
 
       context.report(reportData);
     },
@@ -33,73 +34,21 @@ export function toRuleContext(
 }
 
 export function toSourceCode(
-  source: Deno.lint.SourceCode,
-  mapper: deno2estree.Mapper,
-): eslint.SourceCode {
-  const ast = toProgram(source.ast, source.text, mapper);
-
-  const sourceCode = new eslint.SourceCode({
-    ast,
-    text: source.text,
-    scopeManager: analyze(ast, {
-      ecmaVersion: 2022,
-      sourceType: ast.sourceType,
+  node: SourceCode.Program,
+  text: string,
+): SourceCode {
+  const sourceCode = new SourceCode({
+    ast: node,
+    text,
+    scopeManager: analyze(node, {
+      sourceType: node.sourceType,
+      childVisitorKeys: visitorKeys,
     }),
+    visitorKeys: null,
+    parserServices: null,
   });
 
   return sourceCode;
-}
-
-export function toProgram(
-  ast: Deno.lint.Program,
-  text: string,
-  mapper: deno2estree.Mapper,
-): eslint.AST.Program {
-  const {
-    body,
-    type,
-    sourceType,
-    comments,
-    leadingComments,
-    loc,
-    range,
-    trailingComments,
-  } = deno2estree.toProgram(ast, mapper);
-
-  return {
-    type,
-    body,
-    sourceType,
-    comments: comments ?? ast.comments,
-    leadingComments,
-    loc: loc ?? {
-      start: getLoc(text, 0),
-      end: getLoc(text, text.length),
-    },
-    tokens: [], // TODO
-    range: range ?? ast.range,
-    trailingComments,
-  };
-}
-
-function getLoc(
-  source: string,
-  offset: number,
-): estree.Position {
-  let line = 1;
-  let lineStart = 0;
-
-  for (let i = 0; i < offset; i++) {
-    if (source[i] === "\n") {
-      line++;
-      lineStart = i + 1;
-    }
-  }
-
-  return {
-    line,
-    column: offset - lineStart,
-  };
 }
 
 export function toFixer(fixer: Deno.lint.Fixer): eslint.Rule.RuleFixer {
@@ -207,25 +156,14 @@ const tokenTypes = new Set<string>(
 
 export function toNode(
   node: Deno.lint.Node,
-  cache: WeakMap<WeakKey, any>,
-): eslint.Rule.Node {
+  cache: Cache,
+): eslint.Rule.Node | null {
   const cached = cache.get(node);
 
   if (!cached) {
-    throw new Error(node.type);
-  }
-
-  if (!("parent" in cached)) {
-    setParents(cached);
+    // TODO
+    return null;
   }
 
   return cached;
-}
-
-function setParents(node: estree.Node): void {
-  traverse(node, {
-    enter(current, parent) {
-      (current as any as eslint.Rule.Node).parent = parent;
-    },
-  });
 }

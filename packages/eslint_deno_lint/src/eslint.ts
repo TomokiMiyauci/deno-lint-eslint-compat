@@ -2,7 +2,9 @@ import * as eslint from "eslint";
 import * as Deno2Eslint from "./deno.ts";
 import * as estree from "estree";
 import { mapValues } from "@std/collections";
-import * as deno2estree from "@miyauci/deno-lint-estree";
+import type { Cache } from "./type.ts";
+import * as deno2estree from "@miyauci/deno-lint-tsestree";
+import { SourceCode } from "@typescript-eslint/utils/ts-eslint";
 
 export function toReportData(
   descriptor: eslint.Rule.ReportDescriptor,
@@ -80,40 +82,51 @@ function getMessage(
 export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
   return {
     create(context): Deno.lint.LintVisitor {
-      const weakMap = new WeakMap();
-      const mapper = deno2estree.createMapper((node, estree) => {
-        weakMap.set(node, estree);
-      });
-      const eslintContext = Deno2Eslint.toRuleContext(context, mapper);
-
-      weakMap.set(context.sourceCode.ast, eslintContext.sourceCode.ast);
-
+      const { map: cache, node } = deno2estree.convert(
+        context.sourceCode.ast,
+        context.sourceCode.text,
+      );
+      toBeSourceCode(node);
+      const eslintContext = Deno2Eslint.toRuleContext(context, node);
       const ruleListener = rule.create(eslintContext);
       const nodeListener = toNodeListener(ruleListener);
-      const visitor = toLintVisitor(nodeListener, weakMap);
+      const visitor = toLintVisitor(nodeListener, cache);
 
       return visitor;
     },
   };
 }
 
+function toBeSourceCode(
+  program: deno2estree.TSESTree.Program,
+): asserts program is SourceCode.Program {
+  if (!program.comments) {
+    program.comments = [];
+  }
+  if (!program.tokens) {
+    program.tokens = [];
+  }
+}
+
 function toLintVisitor(
   listener: eslint.Rule.NodeListener,
-  cache: WeakMap<WeakKey, any>,
+  cache: Cache,
 ): Deno.lint.LintVisitor {
   const result: Deno.lint.LintVisitor = {};
 
   for (
     const [selector, callback] of Object.entries(listener) as [
       string,
-      Function | undefined,
+      (node: eslint.Rule.Node) => void | undefined,
     ][]
   ) {
     if (callback) {
       result[selector] = (node) => {
         const esNode = Deno2Eslint.toNode(node, cache);
 
-        callback(esNode);
+        if (esNode) {
+          callback(esNode);
+        }
       };
     }
   }
