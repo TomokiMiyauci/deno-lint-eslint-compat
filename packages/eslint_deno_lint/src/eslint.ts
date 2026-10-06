@@ -12,7 +12,9 @@ export function toReportData(
   map: EstreeDenoMap,
 ): Deno.lint.ReportData {
   const message = getMessage(descriptor);
-  const range = getRange(descriptor, source);
+  const range = "loc" in descriptor
+    ? getRange(descriptor.loc, source)
+    : undefined;
   const fix = toReportFixer(descriptor, map);
   const node = "node" in descriptor && !Deno2Eslint.isToken(descriptor.node)
     ? map.get(descriptor.node)
@@ -20,31 +22,26 @@ export function toReportData(
 
   return {
     message,
-    range: range ?? undefined,
+    range,
     fix,
-    node,
-    // hint is not defined
+    node, // hint is not defined
   };
 }
 
 function getRange(
-  descriptor: eslint.Rule.ReportDescriptor,
+  loc: eslint.AST.SourceLocation | estree.Position,
   source: string,
-): Deno.lint.Range | null {
-  if ("loc" in descriptor) {
-    if ("start" in descriptor.loc) {
-      return [
-        getOffset(source, descriptor.loc.start),
-        getOffset(source, descriptor.loc.end),
-      ];
-    }
-
-    const offset = getOffset(source, descriptor.loc);
-
-    return [offset, offset];
+): Deno.lint.Range {
+  if ("start" in loc) {
+    return [
+      getOffset(source, loc.start),
+      getOffset(source, loc.end),
+    ];
   }
 
-  return null;
+  const offset = getOffset(source, loc);
+
+  return [offset, offset];
 }
 
 function getOffset(
