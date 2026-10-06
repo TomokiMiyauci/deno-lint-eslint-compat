@@ -99,7 +99,7 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
 }
 
 function toBeSourceCode(
-  program: deno2estree.TSESTree.Program,
+  program: TSESTree.Program,
 ): asserts program is TSESLint.SourceCode.Program {
   if (!program.comments) {
     program.comments = [];

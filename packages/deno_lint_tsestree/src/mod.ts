@@ -691,7 +691,7 @@ const definition = {
 
     assertStatement(body);
 
-    return { body, left, right };
+    return { body, left: left as any, right };
   },
 
   ForOfStatement: (
@@ -704,7 +704,7 @@ const definition = {
 
     assertStatement(body);
 
-    return { body, await: node.await, left, right };
+    return { body, await: node.await, left: left as any, right };
   },
 
   ForStatement: (
@@ -718,7 +718,7 @@ const definition = {
 
     assertStatement(body);
 
-    return { body, init: init ?? null, test, update };
+    return { body, init: init as any ?? null, test, update };
   },
 
   FunctionDeclaration: (
@@ -1071,6 +1071,7 @@ const definition = {
       qualifier,
       typeArguments,
       options: null, // TODO
+      source: void 0 as any,
     };
   },
 
@@ -1151,6 +1152,7 @@ const definition = {
       typeAnnotation,
       optional: node.optional,
       readonly: node.readonly,
+      typeParameter: void 0 as any,
     };
   },
 
@@ -1820,7 +1822,7 @@ const definition = {
       declare: node.declare,
       decorators,
       definite: node.definite,
-      key,
+      key: key as any,
       optional: node.optional,
       override: node.override,
       readonly: node.readonly,
@@ -1883,7 +1885,7 @@ const definition = {
       static: node.static,
       typeAnnotation,
       computed: node.computed,
-      key,
+      key: key as any,
     };
   },
 
@@ -2040,7 +2042,7 @@ const definition = {
     const decorators = node.decorators.map(context.toNode);
 
     return {
-      parameter,
+      parameter: parameter as any,
       accessibility: node.accessibility,
       decorators,
       override: node.override,
@@ -2095,7 +2097,7 @@ function isFunctionDeclarationWithName(
 type AllNode =
   | Deno.lint.Node
   | Deno.lint.TSParameterProperty
-  | Deno.lint.AccessorProperty; // TSParameterProperty is not Node yet
+  | Deno.lint.AccessorProperty;
 
 type Definition<T> = {
   [k in keyof NodeMap]: (
@@ -2139,12 +2141,14 @@ export function convert<T extends Deno.lint.Node>(
     denoEstreeMap.set(node, target);
     estreeDenoMap.set(target, node);
 
-    const properties = definition[node.type](node, { toNode });
+    const properties = definition[node.type](node as any, {
+      toNode: toNode as any,
+    });
 
     Object.assign(target, properties);
 
     if ("parent" in node) {
-      const parent = denoEstreeMap.get(node.parent);
+      const parent = denoEstreeMap.get(node.parent as any);
 
       target.parent = parent;
     }
@@ -2155,7 +2159,7 @@ export function convert<T extends Deno.lint.Node>(
   const tsNode = toNode(node);
 
   return {
-    node: tsNode,
+    node: tsNode as any,
     denoEstreeMap,
     estreeDenoMap,
   };
