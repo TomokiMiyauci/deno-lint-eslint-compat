@@ -1,4 +1,7 @@
-import { AST_NODE_TYPES as Type, TSESTree } from "@typescript-eslint/types";
+import {
+  AST_NODE_TYPES as Type,
+  type TSESTree,
+} from "@typescript-eslint/types";
 
 type ExcludeBase<T> = Omit<T, keyof TSESTree.BaseNode>;
 
@@ -2119,15 +2122,24 @@ interface Context {
 }
 
 interface ConvertResult<T> {
-  map: WeakMap<Deno.lint.Node, TSESTree.Node>;
+  denoEstreeMap: DenoEstreeWeakMap;
+  estreeDenoMap: EstreeDenoWeakMap;
+
   node: T;
 }
+
+export interface DenoEstreeWeakMap
+  extends WeakMap<Deno.lint.Node, TSESTree.Node> {}
+
+export interface EstreeDenoWeakMap
+  extends WeakMap<TSESTree.Node, Deno.lint.Node> {}
 
 export function convert<T extends Deno.lint.Node>(
   node: T,
   source: string,
 ): ConvertResult<NodeMap[T["type"]]> {
-  const map = new WeakMap<Deno.lint.Node, TSESTree.Node>();
+  const denoEstreeMap = new WeakMap() satisfies DenoEstreeWeakMap;
+  const estreeDenoMap = new WeakMap() satisfies EstreeDenoWeakMap;
   const lines = calcLineStarts(source);
 
   function toNode(node: Deno.lint.Node) {
@@ -2137,14 +2149,15 @@ export function convert<T extends Deno.lint.Node>(
       loc: loc(lines, node.range),
     } as TSESTree.Node;
 
-    map.set(node, target);
+    denoEstreeMap.set(node, target);
+    estreeDenoMap.set(target, node);
 
     const properties = definition[node.type](node, { toNode });
 
     Object.assign(target, properties);
 
     if ("parent" in node) {
-      const parent = map.get(node.parent);
+      const parent = denoEstreeMap.get(node.parent);
 
       target.parent = parent;
     }
@@ -2156,7 +2169,8 @@ export function convert<T extends Deno.lint.Node>(
 
   return {
     node: tsNode,
-    map,
+    denoEstreeMap,
+    estreeDenoMap,
   };
 }
 

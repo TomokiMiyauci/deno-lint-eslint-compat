@@ -2,7 +2,7 @@
   "name": "@miyauci/deno-lint-tsestree",
   "exports": "./src/mod.ts",
   "imports": {
-    "@typescript-eslint/types": "npm:@typescript-eslint/types@^8.71.0",
-    "estree": "npm:@types/estree@^1.0.9"
-  }
+    "@typescript-eslint/types": "npm:@typescript-eslint/types@^8.71.0"
+  },
+  "publish": false
 }
