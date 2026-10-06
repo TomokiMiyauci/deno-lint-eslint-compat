@@ -6,4 +6,4 @@ This package provides adapters for using ESLint plugins with Deno Lint.
 
 ## LICENSE
 
-[MIT](LICENSE.md)
+[MIT](LICENSE)
