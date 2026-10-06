@@ -20,5 +20,8 @@
   },
   "deno.codeLens.references": true,
   "deno.codeLens.implementations": true,
-  "deno.codeLens.referencesAllFunctions": true
+  "deno.codeLens.referencesAllFunctions": true,
+  "json.schemaDownload.trustedDomains": {
+    "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/": true
+  }
 }
