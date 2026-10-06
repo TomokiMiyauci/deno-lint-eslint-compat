@@ -1,27 +1,27 @@
-import * as eslint from "eslint";
-import * as deno2estree from "@miyauci/deno-lint-tsestree";
+import type * as eslint from "eslint";
 import * as Eslint2Deno from "./eslint.ts";
-import * as estree from "estree";
 import { SourceCode } from "@typescript-eslint/utils/ts-eslint";
-import type { Cache } from "./type.ts";
 import { analyze } from "@typescript-eslint/scope-manager";
-import { visitorKeys } from "@typescript-eslint/visitor-keys";
+import type { TSESLint } from "@typescript-eslint/utils";
+import type { EstreeDenoMap } from "./store.ts";
 
 export function toRuleContext(
   context: Deno.lint.RuleContext,
   node: SourceCode.Program,
+  map: EstreeDenoMap,
 ): eslint.Rule.RuleContext {
   const { filename, id } = context;
   const text = context.sourceCode.text;
 
   const sourceCode = toSourceCode(node, text);
+  const eslintSourceCode = toEslintSourceCode(sourceCode);
 
   return {
     filename,
-    sourceCode,
+    sourceCode: eslintSourceCode,
     id,
     report(descriptor) {
-      const reportData = Eslint2Deno.toReportData(descriptor, text);
+      const reportData = Eslint2Deno.toReportData(descriptor, text, map);
 
       context.report(reportData);
     },
@@ -33,16 +33,21 @@ export function toRuleContext(
   };
 }
 
+function toEslintSourceCode(
+  sourceCode: TSESLint.SourceCode,
+): eslint.SourceCode {
+  return sourceCode as any as eslint.SourceCode; // TODO
+}
+
 export function toSourceCode(
-  node: SourceCode.Program,
+  node: TSESLint.SourceCode.Program,
   text: string,
-): SourceCode {
+): TSESLint.SourceCode {
   const sourceCode = new SourceCode({
     ast: node,
     text,
     scopeManager: analyze(node, {
       sourceType: node.sourceType,
-      childVisitorKeys: visitorKeys,
     }),
     visitorKeys: null,
     parserServices: null,
@@ -51,21 +56,24 @@ export function toSourceCode(
   return sourceCode;
 }
 
-export function toFixer(fixer: Deno.lint.Fixer): eslint.Rule.RuleFixer {
+export function toFixer(
+  fixer: Deno.lint.Fixer,
+  map: EstreeDenoMap,
+): eslint.Rule.RuleFixer {
   return {
     insertTextAfter(el, text) {
       if (isToken(el)) {
         return this.insertTextAfterRange(el.range, text);
       }
 
-      const node = deno2estree.fromNode(el);
+      const node = map.get(el);
       const fix = fixer.insertTextAfter(node, text);
       const esFix = toFix(fix);
 
       return esFix;
     },
     insertTextAfterRange(range, text) {
-      const fix = fixer.insertTextAfterRange(range, text);
+      const fix = fixer.insertTextAfterRange([...range], text);
       const esFix = toFix(fix);
       return esFix;
     },
@@ -74,7 +82,7 @@ export function toFixer(fixer: Deno.lint.Fixer): eslint.Rule.RuleFixer {
         return this.insertTextBeforeRange(el.range, text);
       }
 
-      const node = deno2estree.fromNode(el);
+      const node = map.get(el);
       const fix = fixer.insertTextBefore(node, text);
       const esFix = toFix(fix);
 
@@ -90,14 +98,14 @@ export function toFixer(fixer: Deno.lint.Fixer): eslint.Rule.RuleFixer {
         return this.removeRange(el.range);
       }
 
-      const node = deno2estree.fromNode(el);
+      const node = map.get(el);
       const fix = fixer.remove(node);
       const esFix = toFix(fix);
 
       return esFix;
     },
     removeRange(range) {
-      const fix = fixer.removeRange(range);
+      const fix = fixer.removeRange([...range]);
       const esFix = toFix(fix);
 
       return esFix;
@@ -107,14 +115,14 @@ export function toFixer(fixer: Deno.lint.Fixer): eslint.Rule.RuleFixer {
         return this.replaceTextRange(el.range, text);
       }
 
-      const node = deno2estree.fromNode(el);
+      const node = map.get(el);
       const fix = fixer.replaceText(node, text);
       const esFix = toFix(fix);
 
       return esFix;
     },
     replaceTextRange(range, text) {
-      const fix = fixer.replaceTextRange(range, text);
+      const fix = fixer.replaceTextRange([...range], text);
       const esFix = toFix(fix);
 
       return esFix;
@@ -129,7 +137,9 @@ export function toFix(fix: Deno.lint.Fix): eslint.Rule.Fix {
   };
 }
 
-function isToken(el: estree.Node | eslint.AST.Token): el is eslint.AST.Token {
+export function isToken(
+  el: eslint.JSSyntaxElement,
+): el is eslint.AST.Token {
   if ("value" in el) {
     return tokenTypes.has(el.type);
   }
@@ -153,17 +163,3 @@ const tokenTypes = new Set<string>(
     "Template",
   ] satisfies eslint.AST.TokenType[],
 );
-
-export function toNode(
-  node: Deno.lint.Node,
-  cache: Cache,
-): eslint.Rule.Node | null {
-  const cached = cache.get(node);
-
-  if (!cached) {
-    // TODO
-    return null;
-  }
-
-  return cached;
-}

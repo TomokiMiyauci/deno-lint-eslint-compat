@@ -1,25 +1,29 @@
-import * as eslint from "eslint";
+import type * as eslint from "eslint";
 import * as Deno2Eslint from "./deno.ts";
-import * as estree from "estree";
+import type * as estree from "estree";
 import { mapValues } from "@std/collections";
-import type { Cache } from "./type.ts";
 import * as deno2estree from "@miyauci/deno-lint-tsestree";
-import { SourceCode } from "@typescript-eslint/utils/ts-eslint";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
+import { DenoEstreeMap, EstreeDenoMap } from "./store.ts";
 
 export function toReportData(
   descriptor: eslint.Rule.ReportDescriptor,
   source: string,
+  map: EstreeDenoMap,
 ): Deno.lint.ReportData {
   const message = getMessage(descriptor);
   const range = getRange(descriptor, source);
-  const fix = toReportFixer(descriptor);
+  const fix = toReportFixer(descriptor, map);
+  const node = "node" in descriptor && !Deno2Eslint.isToken(descriptor.node)
+    ? map.get(descriptor.node)
+    : undefined;
 
   return {
     message,
     range: range ?? undefined,
     fix,
+    node,
     // hint is not defined
-    // node is not defined
   };
 }
 
@@ -38,13 +42,6 @@ function getRange(
     const offset = getOffset(source, descriptor.loc);
 
     return [offset, offset];
-  }
-
-  if (descriptor.node.loc) {
-    return [
-      getOffset(source, descriptor.node.loc.start),
-      getOffset(source, descriptor.node.loc.end),
-    ];
   }
 
   return null;
@@ -82,15 +79,22 @@ function getMessage(
 export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
   return {
     create(context): Deno.lint.LintVisitor {
-      const { map: cache, node } = deno2estree.convert(
+      const { denoEstreeMap, estreeDenoMap, node } = deno2estree.convert(
         context.sourceCode.ast,
         context.sourceCode.text,
       );
       toBeSourceCode(node);
-      const eslintContext = Deno2Eslint.toRuleContext(context, node);
+      const eslintContext = Deno2Eslint.toRuleContext(
+        context,
+        node,
+        new EstreeDenoMap(estreeDenoMap),
+      );
       const ruleListener = rule.create(eslintContext);
       const nodeListener = toNodeListener(ruleListener);
-      const visitor = toLintVisitor(nodeListener, cache);
+      const visitor = toLintVisitor(
+        nodeListener,
+        new DenoEstreeMap(denoEstreeMap),
+      );
 
       return visitor;
     },
@@ -99,7 +103,7 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
 
 function toBeSourceCode(
   program: deno2estree.TSESTree.Program,
-): asserts program is SourceCode.Program {
+): asserts program is TSESLint.SourceCode.Program {
   if (!program.comments) {
     program.comments = [];
   }
@@ -110,23 +114,21 @@ function toBeSourceCode(
 
 function toLintVisitor(
   listener: eslint.Rule.NodeListener,
-  cache: Cache,
+  map: DenoEstreeMap,
 ): Deno.lint.LintVisitor {
   const result: Deno.lint.LintVisitor = {};
 
   for (
     const [selector, callback] of Object.entries(listener) as [
       string,
-      (node: eslint.Rule.Node) => void | undefined,
+      (node: TSESTree.Node) => void | undefined,
     ][]
   ) {
     if (callback) {
       result[selector] = (node) => {
-        const esNode = Deno2Eslint.toNode(node, cache);
+        const esNode = map.get(node);
 
-        if (esNode) {
-          callback(esNode);
-        }
+        callback(esNode);
       };
     }
   }
@@ -162,13 +164,14 @@ export function toPlugin(
 
 export function toReportFixer(
   descriptor: eslint.Rule.ReportDescriptor,
+  map: EstreeDenoMap,
 ): Deno.lint.ReportData["fix"] {
   const { fix } = descriptor;
 
   if (!fix) return;
 
   return (fixer) => {
-    const eslintFixer = Deno2Eslint.toFixer(fixer);
+    const eslintFixer = Deno2Eslint.toFixer(fixer, map);
     const result = fix(eslintFixer);
     const denoResult = toFixResult(result);
 
