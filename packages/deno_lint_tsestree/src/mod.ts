@@ -81,7 +81,7 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.ArrowFunctionExpression> => {
     if (node.generator) {
-      throw new Error();
+      throw createError();
     }
 
     const params = node.params.map(context.toNode);
@@ -205,9 +205,6 @@ const definition = {
     node: Deno.lint.ClassExpression,
     context,
   ): ExcludeBase<TSESTree.ClassExpression> => {
-    if (node.abstract) throw new Error();
-    if (node.declare) throw new Error();
-
     const body = context.toNode(node.body);
     const id = node.id && context.toNode(node.id);
     const $implements = node.implements.map(
@@ -218,6 +215,9 @@ const definition = {
       context.toNode(node.superTypeArguments);
     const typeParameters = node.typeParameters &&
       context.toNode(node.typeParameters);
+
+    if (node.abstract) throw createError();
+    if (node.declare) throw createError();
 
     return {
       body,
@@ -542,7 +542,7 @@ const definition = {
     const argument = node.argument && context.toNode(node.argument);
 
     if (node.delegate) {
-      if (!argument) throw new Error("semantic error");
+      if (!argument) throw createError();
 
       return { delegate: node.delegate, argument };
     }
@@ -555,7 +555,7 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.ClassDeclaration> => {
     const body = context.toNode(node.body);
-    if (!node.id) throw new Error();
+    if (!node.id) throw createError();
 
     const id = context.toNode(node.id);
     const $implements = node.implements.map(
@@ -600,14 +600,14 @@ const definition = {
     if (
       body.type === Type.ClassDeclaration && !isClassDeclarationWithName(body)
     ) {
-      throw new Error();
+      throw createError();
     }
 
     if (
       body.type === Type.FunctionDeclaration &&
       !isFunctionDeclarationWithName(body)
     ) {
-      throw new Error();
+      throw createError();
     }
 
     const test = context.toNode(node.test);
@@ -638,7 +638,7 @@ const definition = {
     node: Deno.lint.ExportDefaultDeclaration,
     context,
   ): ExcludeBase<TSESTree.ExportDefaultDeclaration> => {
-    if (node.exportKind === "type") throw new Error("semantic error");
+    if (node.exportKind === "type") throw createError();
 
     const declaration = context.toNode(node.declaration);
 
@@ -725,17 +725,16 @@ const definition = {
     node: Deno.lint.FunctionDeclaration,
     context,
   ): ExcludeBase<TSESTree.FunctionDeclaration> => {
-    if (node.declare) throw new Error("semantic error");
-
-    if (!node.body) throw new Error();
-    const body = context.toNode(node.body);
-    if (!node.id) throw new Error();
-    const id = context.toNode(node.id);
+    const body = node.body && context.toNode(node.body);
+    const id = node.id && context.toNode(node.id);
     const params = node.params.map(context.toNode);
     const returnType = node.returnType &&
       context.toNode(node.returnType);
     const typeParameters = node.typeParameters &&
       context.toNode(node.typeParameters);
+
+    if (node.declare) throw createError();
+    if (!body) throw createError();
 
     return {
       body,
@@ -839,15 +838,15 @@ const definition = {
     node: Deno.lint.TSDeclareFunction,
     context,
   ): ExcludeBase<TSESTree.TSDeclareFunction> => {
-    if (node.generator) {
-      throw new Error("semantic error");
-    }
-
     const id = node.id && context.toNode(node.id);
     const params = node.params.map(context.toNode);
     const returnType = node.returnType && context.toNode(node.returnType);
     const typeParameters = node.typeParameters &&
       context.toNode(node.typeParameters);
+
+    if (node.generator) {
+      throw createError();
+    }
 
     return {
       async: node.async,
@@ -1117,20 +1116,20 @@ const definition = {
 
     if (literal.type === Type.Literal) {
       if ("regex" in literal) {
-        throw new Error();
+        throw createError();
       }
 
       if (literal.value === null && !("bigint" in literal)) {
-        throw new Error();
+        throw createError();
       }
     }
 
     if (literal.type === Type.UnaryExpression) {
       if (!(literal.operator === "+" || literal.operator === "-")) {
-        throw new Error();
+        throw createError();
       }
     }
-    if (literal.type === Type.UpdateExpression) throw new Error();
+    if (literal.type === Type.UpdateExpression) throw createError();
 
     return { literal };
   },
@@ -1298,7 +1297,7 @@ const definition = {
     const parameterName = context.toNode(node.parameterName);
 
     if (!node.asserts) {
-      if (!node.typeAnnotation) throw new Error("semantic error");
+      if (!node.typeAnnotation) throw createError();
 
       const typeAnnotation = context.toNode(node.typeAnnotation);
 
@@ -1380,7 +1379,7 @@ const definition = {
 
     if (imported.type === Type.Literal) {
       if (typeof imported.value !== "string") {
-        throw new Error();
+        throw createError();
       }
     }
 
@@ -1807,7 +1806,7 @@ const definition = {
     context,
   ): ExcludeBase<TSESTree.TSAbstractPropertyDefinition> => {
     if (node.value !== null) {
-      throw new Error("semantic error");
+      throw createError();
     }
 
     const decorators = node.decorators.map(context.toNode);
