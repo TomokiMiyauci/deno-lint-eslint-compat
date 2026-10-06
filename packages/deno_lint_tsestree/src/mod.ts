@@ -2193,24 +2193,14 @@ function findLine(lines: readonly number[], offset: number): number {
 function loc(
   lines: readonly number[],
   range: readonly [number, number],
-): SourceLocation {
+): TSESTree.SourceLocation {
   return {
     start: position(lines, range[0]),
     end: position(lines, range[1]),
   };
 }
 
-type Position = {
-  line: number;
-  column: number;
-};
-
-type SourceLocation = {
-  start: Position;
-  end: Position;
-};
-
-function position(lines: readonly number[], offset: number): Position {
+function position(lines: readonly number[], offset: number): TSESTree.Position {
   const line = findLine(lines, offset);
   const lineStart = lines[line];
 
