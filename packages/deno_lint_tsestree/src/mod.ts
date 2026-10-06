@@ -5,8 +5,6 @@ import {
 
 type ExcludeBase<T> = Omit<T, keyof TSESTree.BaseNode>;
 
-export { TSESTree } from "@typescript-eslint/types";
-
 const definition = {
   Program: (
     node: Deno.lint.Program,
@@ -428,7 +426,7 @@ const definition = {
     return { expressions };
   },
 
-  Super: (node: Deno.lint.Super, context): ExcludeBase<TSESTree.Super> => {
+  Super: (_: Deno.lint.Super): ExcludeBase<TSESTree.Super> => {
     return {};
   },
 
@@ -455,8 +453,7 @@ const definition = {
   },
 
   ThisExpression: (
-    node: Deno.lint.ThisExpression,
-    context,
+    _: Deno.lint.ThisExpression,
   ): ExcludeBase<TSESTree.ThisExpression> => {
     return {};
   },
@@ -589,8 +586,7 @@ const definition = {
   },
 
   DebuggerStatement: (
-    node: Deno.lint.DebuggerStatement,
-    context,
+    _: Deno.lint.DebuggerStatement,
   ): ExcludeBase<TSESTree.DebuggerStatement> => {
     return {};
   },
@@ -930,14 +926,29 @@ const definition = {
     node: Deno.lint.TSModuleDeclaration,
     context,
   ): ExcludeBase<TSESTree.TSModuleDeclaration> => {
-    throw new Error();
+    const id = context.toNode(node.id);
+    const body = node.body && context.toNode(node.body);
+
+    if (id.type === Type.Literal) assertStringLiteral(id);
+
+    return {
+      id,
+      kind: node.kind,
+      declare: node.declare,
+      body,
+      global: node.kind === "global",
+    };
   },
 
   TSNamespaceExportDeclaration: (
     node: Deno.lint.TSNamespaceExportDeclaration,
     context,
   ): ExcludeBase<TSESTree.TSNamespaceExportDeclaration> => {
-    throw new Error();
+    const id = context.toNode(node.id);
+
+    return {
+      id,
+    };
   },
 
   TSTypeAliasDeclaration: (
@@ -991,8 +1002,7 @@ const definition = {
   },
 
   TSAnyKeyword: (
-    node: Deno.lint.TSAnyKeyword,
-    context,
+    _: Deno.lint.TSAnyKeyword,
   ): ExcludeBase<TSESTree.TSAnyKeyword> => {
     return {};
   },
@@ -1007,15 +1017,13 @@ const definition = {
   },
 
   TSBigIntKeyword: (
-    node: Deno.lint.TSBigIntKeyword,
-    context,
+    _: Deno.lint.TSBigIntKeyword,
   ): ExcludeBase<TSESTree.TSBigIntKeyword> => {
     return {};
   },
 
   TSBooleanKeyword: (
-    node: Deno.lint.TSBooleanKeyword,
-    context,
+    _: Deno.lint.TSBooleanKeyword,
   ): ExcludeBase<TSESTree.TSBooleanKeyword> => {
     return {};
   },
@@ -1096,8 +1104,7 @@ const definition = {
   },
 
   TSIntrinsicKeyword: (
-    node: Deno.lint.TSIntrinsicKeyword,
-    context,
+    _: Deno.lint.TSIntrinsicKeyword,
   ): ExcludeBase<TSESTree.TSIntrinsicKeyword> => {
     return {};
   },
@@ -1163,29 +1170,25 @@ const definition = {
   },
 
   TSNeverKeyword: (
-    node: Deno.lint.TSNeverKeyword,
-    context,
+    _: Deno.lint.TSNeverKeyword,
   ): ExcludeBase<TSESTree.TSNeverKeyword> => {
     return {};
   },
 
   TSNullKeyword: (
-    node: Deno.lint.TSNullKeyword,
-    context,
+    _: Deno.lint.TSNullKeyword,
   ): ExcludeBase<TSESTree.TSNullKeyword> => {
     return {};
   },
 
   TSNumberKeyword: (
-    node: Deno.lint.TSNumberKeyword,
-    context,
+    _: Deno.lint.TSNumberKeyword,
   ): ExcludeBase<TSESTree.TSNumberKeyword> => {
     return {};
   },
 
   TSObjectKeyword: (
-    node: Deno.lint.TSObjectKeyword,
-    context,
+    _: Deno.lint.TSObjectKeyword,
   ): ExcludeBase<TSESTree.TSObjectKeyword> => {
     return {};
   },
@@ -1226,15 +1229,13 @@ const definition = {
   },
 
   TSStringKeyword: (
-    node: Deno.lint.TSStringKeyword,
-    context,
+    _: Deno.lint.TSStringKeyword,
   ): ExcludeBase<TSESTree.TSStringKeyword> => {
     return {};
   },
 
   TSSymbolKeyword: (
-    node: Deno.lint.TSSymbolKeyword,
-    context,
+    _: Deno.lint.TSSymbolKeyword,
   ): ExcludeBase<TSESTree.TSSymbolKeyword> => {
     return {};
   },
@@ -1253,8 +1254,7 @@ const definition = {
   },
 
   TSThisType: (
-    node: Deno.lint.TSThisType,
-    context,
+    _: Deno.lint.TSThisType,
   ): ExcludeBase<TSESTree.TSThisType> => {
     return {};
   },
@@ -1345,8 +1345,7 @@ const definition = {
   },
 
   TSUndefinedKeyword: (
-    node: Deno.lint.TSUndefinedKeyword,
-    context,
+    _: Deno.lint.TSUndefinedKeyword,
   ): ExcludeBase<TSESTree.TSUndefinedKeyword> => {
     return {};
   },
@@ -1361,15 +1360,13 @@ const definition = {
   },
 
   TSUnknownKeyword: (
-    node: Deno.lint.TSUnknownKeyword,
-    context,
+    _: Deno.lint.TSUnknownKeyword,
   ): ExcludeBase<TSESTree.TSUnknownKeyword> => {
     return {};
   },
 
   TSVoidKeyword: (
-    node: Deno.lint.TSVoidKeyword,
-    context,
+    _: Deno.lint.TSVoidKeyword,
   ): ExcludeBase<TSESTree.TSVoidKeyword> => {
     return {};
   },
@@ -1565,7 +1562,6 @@ const definition = {
 
   TemplateElement: (
     node: Deno.lint.TemplateElement,
-    context,
   ): ExcludeBase<TSESTree.TemplateElement> => {
     return {
       tail: node.tail,
@@ -1578,7 +1574,6 @@ const definition = {
 
   PrivateIdentifier: (
     node: Deno.lint.PrivateIdentifier,
-    context,
   ): ExcludeBase<TSESTree.PrivateIdentifier> => {
     return { name: node.name };
   },
@@ -1645,7 +1640,6 @@ const definition = {
 
   JSXIdentifier: (
     node: Deno.lint.JSXIdentifier,
-    context,
   ): ExcludeBase<TSESTree.JSXIdentifier> => {
     return { name: node.name };
   },
@@ -1661,8 +1655,7 @@ const definition = {
   },
 
   JSXEmptyExpression: (
-    node: Deno.lint.JSXEmptyExpression,
-    context,
+    _: Deno.lint.JSXEmptyExpression,
   ): ExcludeBase<TSESTree.JSXEmptyExpression> => {
     return {};
   },
@@ -1720,15 +1713,13 @@ const definition = {
   },
 
   JSXOpeningFragment: (
-    node: Deno.lint.JSXOpeningFragment,
-    context,
+    _: Deno.lint.JSXOpeningFragment,
   ): ExcludeBase<TSESTree.JSXOpeningFragment> => {
     return {};
   },
 
   JSXClosingFragment: (
-    node: Deno.lint.JSXClosingFragment,
-    context,
+    _: Deno.lint.JSXClosingFragment,
   ): ExcludeBase<TSESTree.JSXClosingFragment> => {
     return {};
   },
@@ -1745,7 +1736,6 @@ const definition = {
 
   JSXText: (
     node: Deno.lint.JSXText,
-    context,
   ): ExcludeBase<TSESTree.JSXText> => {
     return {
       raw: node.raw,
@@ -2062,7 +2052,6 @@ const definition = {
 
   Line: (
     node: Deno.lint.LineComment,
-    context,
   ): ExcludeBase<TSESTree.LineComment> => {
     return {
       value: node.value,
@@ -2071,7 +2060,6 @@ const definition = {
 
   Block: (
     node: Deno.lint.BlockComment,
-    context,
   ): ExcludeBase<TSESTree.BlockComment> => {
     return {
       value: node.value,
