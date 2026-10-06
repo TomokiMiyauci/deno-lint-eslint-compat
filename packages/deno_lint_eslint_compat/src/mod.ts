@@ -1,1 +1,3 @@
-export { toPlugin } from "./eslint.ts";
+import { toPlugin } from "./eslint.ts";
+
+export const toDenoPlugin = toPlugin;
