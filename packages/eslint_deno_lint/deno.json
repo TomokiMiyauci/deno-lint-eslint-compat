@@ -1,8 +1,11 @@
 {
-  "name": "@miyauci/deno-lint-eslint",
+  "name": "@miyauci/deno-lint-eslint-compat",
   "exports": "./src/mod.ts",
   "imports": {
     "@std/collections": "jsr:@std/collections@^1.4.0",
-    "eslint": "npm:eslint@^10.11.0"
+    "@types/estraverse": "npm:@types/estraverse@^5.1.7",
+    "@typescript-eslint/types": "npm:@typescript-eslint/types@^8.71.0",
+    "eslint": "npm:eslint@^10.11.0",
+    "estraverse": "npm:estraverse@^5.3.0"
   }
 }
