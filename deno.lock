@@ -522,18 +522,16 @@
     }
   },
   "workspace": {
-    "members": {
-      "packages/deno_lint_eslint_compat": {
-        "dependencies": [
-          "jsr:@std/collections@^1.4.0",
-          "npm:@types/estree@^1.0.9",
-          "npm:@typescript-eslint/scope-manager@^8.71.0",
-          "npm:@typescript-eslint/types@^8.71.0",
-          "npm:@typescript-eslint/utils@^8.71.0",
-          "npm:eslint@^10.11.0"
-        ]
-      },
-      "packages/deno_lint_tsestree": {
+    "dependencies": [
+      "jsr:@std/collections@^1.4.0",
+      "npm:@types/estree@^1.0.9",
+      "npm:@typescript-eslint/scope-manager@^8.71.0",
+      "npm:@typescript-eslint/types@^8.71.0",
+      "npm:@typescript-eslint/utils@^8.71.0",
+      "npm:eslint@^10.11.0"
+    ],
+    "links": {
+      "jsr:@miyauci/deno-lint-tsestree": {
         "dependencies": [
           "npm:@typescript-eslint/types@^8.71.0"
         ]
