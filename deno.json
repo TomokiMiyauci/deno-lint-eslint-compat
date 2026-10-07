@@ -1,5 +1,13 @@
 {
-  "workspace": [
-    "./packages/*"
-  ]
+  "name": "@miyauci/deno-lint-eslint-compat",
+  "exports": "./src/mod.ts",
+  "imports": {
+    "@std/collections": "jsr:@std/collections@^1.4.0",
+    "estree": "npm:@types/estree@^1.0.9",
+    "@typescript-eslint/scope-manager": "npm:@typescript-eslint/scope-manager@^8.71.0",
+    "@typescript-eslint/types": "npm:@typescript-eslint/types@^8.71.0",
+    "@typescript-eslint/utils": "npm:@typescript-eslint/utils@^8.71.0",
+    "eslint": "npm:eslint@^10.11.0",
+    "@miyauci/deno-lint-tsestree": "./deno_lint_tsestree/src/mod.ts"
+  }
 }
