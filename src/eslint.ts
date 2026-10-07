@@ -87,9 +87,8 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
         new EstreeDenoMap(estreeDenoMap),
       );
       const ruleListener = rule.create(eslintContext);
-      const nodeListener = toNodeListener(ruleListener);
       const visitor = toLintVisitor(
-        nodeListener,
+        ruleListener,
         new DenoEstreeMap(denoEstreeMap),
       );
 
@@ -131,23 +130,6 @@ function toLintVisitor(
   }
 
   return result;
-}
-
-export function toNodeListener(
-  listener: eslint.Rule.RuleListener,
-): eslint.Rule.NodeListener {
-  const {
-    onCodePathEnd,
-    onCodePathSegmentEnd,
-    onCodePathSegmentLoop,
-    onCodePathSegmentStart,
-    onCodePathStart,
-    onUnreachableCodePathSegmentEnd,
-    onUnreachableCodePathSegmentStart,
-    ...rest
-  } = listener;
-
-  return rest;
 }
 
 export function toPlugin(

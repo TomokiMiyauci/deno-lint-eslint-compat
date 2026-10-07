@@ -8,6 +8,7 @@ interface ReadonlyWeakMap<T, U> {
 export class EstreeDenoMap implements ReadonlyWeakMap<object, Deno.lint.Node> {
   constructor(private map: deno2estree.EstreeDenoWeakMap) {}
   get(key: object): Deno.lint.Node {
+    // deno-lint-ignore no-explicit-any
     const result = this.map.get(key as any);
 
     if (!result) throw new Error("maybe bug");

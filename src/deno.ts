@@ -36,6 +36,7 @@ export function toRuleContext(
 function toEslintSourceCode(
   sourceCode: TSESLint.SourceCode,
 ): eslint.SourceCode {
+  // deno-lint-ignore no-explicit-any
   return sourceCode as any as eslint.SourceCode; // TODO
 }
 
