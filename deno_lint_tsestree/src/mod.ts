@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import {
   AST_NODE_TYPES as Type,
   type TSESTree,
