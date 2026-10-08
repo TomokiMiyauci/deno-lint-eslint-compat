@@ -189,7 +189,7 @@ export function toPlugin(
   plugin: eslint.ESLint.Plugin,
 ): Deno.lint.Plugin {
   const name = plugin.meta?.name ?? "eslint";
-  const rules = mapValues(plugin.rules ?? {}, toRule);
+  const rules = toRules(plugin.rules);
 
   return { name, rules };
 }
@@ -217,4 +217,10 @@ function toFixResult(
   if (result === null) return [];
 
   return result;
+}
+
+export function toRules(
+  rules: eslint.ESLint.Plugin["rules"],
+): Deno.lint.Plugin["rules"] {
+  return mapValues(rules ?? {}, toRule);
 }
