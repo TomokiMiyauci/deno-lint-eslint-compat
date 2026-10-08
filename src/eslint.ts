@@ -116,18 +116,30 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
 
   return {
     create(context): Deno.lint.LintVisitor {
+      const { sourceCode: { text }, filename, id } = context;
       const { denoEstreeMap, estreeDenoMap, node } = deno2estree.convert(
         context.sourceCode.ast,
-        context.sourceCode.text,
+        text,
       );
       toBeSourceCode(node);
-      const eslintContext = Deno2Eslint.toRuleContext(
+      const report = Deno2Eslint.createReport(
         context,
-        node,
         new EstreeDenoMap(estreeDenoMap),
         messages,
       );
-      const ruleListener = rule.create(eslintContext);
+      const sourceCode = Deno2Eslint.toSourceCode(node, text);
+      const ruleContext = {
+        filename,
+        id,
+        sourceCode,
+        report,
+        cwd: "", // TODO
+        physicalFilename: filename,
+        settings: {}, // TODO
+        languageOptions: {}, // TODO
+        options: [], // TODO
+      } satisfies eslint.Rule.RuleContext;
+      const ruleListener = rule.create(ruleContext);
       const visitor = toLintVisitor(
         ruleListener,
         new DenoEstreeMap(denoEstreeMap),
