@@ -116,9 +116,9 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
 
   return {
     create(context): Deno.lint.LintVisitor {
-      const { sourceCode: { text }, filename, id } = context;
+      const { sourceCode: { text, ast }, filename, id } = context;
       const { denoEstreeMap, estreeDenoMap, node } = deno2estree.convert(
-        context.sourceCode.ast,
+        ast,
         text,
       );
       toBeSourceCode(node);
@@ -137,7 +137,7 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
         physicalFilename: filename,
         settings: {}, // TODO
         languageOptions: {}, // TODO
-        options: [], // TODO
+        options: rule.meta?.defaultOptions ?? [],
       } satisfies eslint.Rule.RuleContext;
       const ruleListener = rule.create(ruleContext);
       const visitor = toLintVisitor(
