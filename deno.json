@@ -10,5 +10,9 @@
     "@typescript-eslint/utils": "npm:@typescript-eslint/utils@^8.71.0",
     "eslint": "npm:eslint@^10.11.0",
     "@miyauci/deno-lint-tsestree": "./deno_lint_tsestree/src/mod.ts"
+  },
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true
   }
 }
