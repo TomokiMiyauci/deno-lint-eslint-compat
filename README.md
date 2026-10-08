@@ -7,7 +7,7 @@ This package provides adapters for using ESLint plugins with Deno Lint.
 ## Usage
 
 ```ts
-import { toDenoPlugin } from "@miyauci/deno-lint-eslint-compat";
+import { toDenoPlugin } from "@deno-lint/eslint-compat";
 import type { ESLint } from "eslint";
 
 declare const eslintPlugin: ESLint.Plugin;
