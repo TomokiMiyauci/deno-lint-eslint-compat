@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/collections@^1.4.0": "1.4.0",
+    "npm:@eslint/core@^1.2.1": "1.2.1",
     "npm:@types/estree@^1.0.9": "1.0.9",
     "npm:@typescript-eslint/scope-manager@^8.71.0": "8.71.0",
     "npm:@typescript-eslint/types@^8.71.0": "8.71.0",
@@ -524,6 +525,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/collections@^1.4.0",
+      "npm:@eslint/core@^1.2.1",
       "npm:@types/estree@^1.0.9",
       "npm:@typescript-eslint/scope-manager@^8.71.0",
       "npm:@typescript-eslint/types@^8.71.0",

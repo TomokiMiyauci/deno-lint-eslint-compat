@@ -9,6 +9,7 @@ export function toRuleContext(
   context: Deno.lint.RuleContext,
   node: SourceCode.Program,
   map: EstreeDenoMap,
+  messages: Record<string, string>,
 ): eslint.Rule.RuleContext {
   const { filename, id } = context;
   const text = context.sourceCode.text;
@@ -21,7 +22,12 @@ export function toRuleContext(
     sourceCode: eslintSourceCode,
     id,
     report(descriptor) {
-      const reportData = Eslint2Deno.toReportData(descriptor, text, map);
+      const reportData = Eslint2Deno.toReportData(
+        descriptor,
+        text,
+        map,
+        messages,
+      );
 
       context.report(reportData);
     },

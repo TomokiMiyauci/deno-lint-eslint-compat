@@ -1,17 +1,20 @@
 import type * as eslint from "eslint";
 import * as Deno2Eslint from "./deno.ts";
 import type * as estree from "estree";
+import type { MessagePlaceholderData } from "@eslint/core";
 import { mapValues } from "@std/collections";
 import * as deno2estree from "@miyauci/deno-lint-tsestree";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 import { DenoEstreeMap, EstreeDenoMap } from "./store.ts";
+import { interpolate } from "./interpolate.ts";
 
 export function toReportData(
   descriptor: eslint.Rule.ReportDescriptor,
   source: string,
   map: EstreeDenoMap,
+  messages: Record<string, string>,
 ): Deno.lint.ReportData {
-  const message = getMessage(descriptor);
+  const message = getMessage(descriptor, messages);
   const range = "loc" in descriptor
     ? getRange(descriptor.loc, source)
     : undefined;
@@ -63,17 +66,54 @@ function getOffset(
   return offset + position.column;
 }
 
-function getMessage(
+function normalizeMessagePlaceholderData(
+  data: MessagePlaceholderData,
+): Record<string, string> {
+  return mapValues(data, String);
+}
+
+/**
+ * Computes the message from a report descriptor.
+ * @param descriptor The report descriptor.
+ * @returns The computed message.
+ * @throws {TypeError} If `descriptor.messageId` is defined and messages'key is not defined.
+ */
+function computeMessageFromDescriptor(
   descriptor: eslint.Rule.ReportDescriptor,
+  messages: Record<string, string>,
 ): string {
-  if ("message" in descriptor) {
+  if ("messageId" in descriptor) {
+    const id = descriptor.messageId;
+    const message = messages[id];
+
+    if (typeof message !== "string") {
+      throw new TypeError(
+        `context.report() called with a messageId of '${id}' which is not present in the 'messages' config: ${
+          JSON.stringify(messages, null, 2)
+        }`,
+      );
+    }
+
+    return message;
+  } else {
     return descriptor.message;
   }
+}
 
-  throw new Error("unimplemented");
+function getMessage(
+  descriptor: eslint.Rule.ReportDescriptor,
+  messages: Record<string, string>,
+): string {
+  const data = normalizeMessagePlaceholderData(descriptor.data ?? {});
+  const message = computeMessageFromDescriptor(descriptor, messages);
+  const interpolatedMessage = interpolate(message, data);
+
+  return interpolatedMessage;
 }
 
 export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
+  const messages = rule.meta?.messages ?? {};
+
   return {
     create(context): Deno.lint.LintVisitor {
       const { denoEstreeMap, estreeDenoMap, node } = deno2estree.convert(
@@ -85,6 +125,7 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
         context,
         node,
         new EstreeDenoMap(estreeDenoMap),
+        messages,
       );
       const ruleListener = rule.create(eslintContext);
       const visitor = toLintVisitor(
