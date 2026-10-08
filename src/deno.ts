@@ -5,35 +5,24 @@ import { analyze } from "@typescript-eslint/scope-manager";
 import type { TSESLint } from "@typescript-eslint/utils";
 import type { EstreeDenoMap } from "./store.ts";
 
-export function toRuleContext(
+export function createReport(
   context: Deno.lint.RuleContext,
-  node: SourceCode.Program,
   map: EstreeDenoMap,
-): eslint.Rule.RuleContext {
-  const { filename, id } = context;
-  const text = context.sourceCode.text;
+  messages: Record<string, string>,
+): eslint.Rule.RuleContext["report"] {
+  return (violation) => {
+    const reportData = Eslint2Deno.toReportData(
+      violation,
+      context.sourceCode.text,
+      map,
+      messages,
+    );
 
-  const sourceCode = toSourceCode(node, text);
-  const eslintSourceCode = toEslintSourceCode(sourceCode);
-
-  return {
-    filename,
-    sourceCode: eslintSourceCode,
-    id,
-    report(descriptor) {
-      const reportData = Eslint2Deno.toReportData(descriptor, text, map);
-
-      context.report(reportData);
-    },
-    cwd: "", // TODO
-    physicalFilename: filename,
-    settings: {}, // TODO
-    languageOptions: {}, // TODO
-    options: [], // TODO
+    context.report(reportData);
   };
 }
 
-function toEslintSourceCode(
+export function toEslintSourceCode(
   sourceCode: TSESLint.SourceCode,
 ): eslint.SourceCode {
   // deno-lint-ignore no-explicit-any
@@ -43,7 +32,7 @@ function toEslintSourceCode(
 export function toSourceCode(
   node: TSESLint.SourceCode.Program,
   text: string,
-): TSESLint.SourceCode {
+): eslint.SourceCode {
   const sourceCode = new SourceCode({
     ast: node,
     text,
@@ -54,7 +43,9 @@ export function toSourceCode(
     parserServices: null,
   });
 
-  return sourceCode;
+  const eslintSourceCode = toEslintSourceCode(sourceCode);
+
+  return eslintSourceCode;
 }
 
 export function toFixer(
@@ -74,7 +65,7 @@ export function toFixer(
       return esFix;
     },
     insertTextAfterRange(range, text) {
-      const fix = fixer.insertTextAfterRange([...range], text);
+      const fix = fixer.insertTextAfterRange(range, text);
       const esFix = toFix(fix);
       return esFix;
     },
@@ -106,7 +97,7 @@ export function toFixer(
       return esFix;
     },
     removeRange(range) {
-      const fix = fixer.removeRange([...range]);
+      const fix = fixer.removeRange(range);
       const esFix = toFix(fix);
 
       return esFix;
@@ -123,7 +114,7 @@ export function toFixer(
       return esFix;
     },
     replaceTextRange(range, text) {
-      const fix = fixer.replaceTextRange([...range], text);
+      const fix = fixer.replaceTextRange(range, text);
       const esFix = toFix(fix);
 
       return esFix;
