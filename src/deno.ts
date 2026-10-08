@@ -65,7 +65,7 @@ export function toFixer(
       return esFix;
     },
     insertTextAfterRange(range, text) {
-      const fix = fixer.insertTextAfterRange([...range], text);
+      const fix = fixer.insertTextAfterRange(range, text);
       const esFix = toFix(fix);
       return esFix;
     },
@@ -97,7 +97,7 @@ export function toFixer(
       return esFix;
     },
     removeRange(range) {
-      const fix = fixer.removeRange([...range]);
+      const fix = fixer.removeRange(range);
       const esFix = toFix(fix);
 
       return esFix;
@@ -114,7 +114,7 @@ export function toFixer(
       return esFix;
     },
     replaceTextRange(range, text) {
-      const fix = fixer.replaceTextRange([...range], text);
+      const fix = fixer.replaceTextRange(range, text);
       const esFix = toFix(fix);
 
       return esFix;
