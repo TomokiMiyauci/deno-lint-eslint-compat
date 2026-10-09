@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/compare/v0.1.0...v0.2.0) (2026-10-08)
+
+
+### Features
+
+* add message interpolation functionality and update related methods ([ced60f3](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/commit/ced60f3766e9e0c49bed3e33ac73810e1a7fcf9a))
+* add toRules function for mapping plugin rules ([108ae1f](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/commit/108ae1f71fee47bd30afa8f2d583c8fed949e2d5))
+
+
+### Bug Fixes
+
+* set default options to rule context options ([d8187e8](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/commit/d8187e8c394fea1edb180747e4f1bfcc7a6a2892))
+
 ## 0.1.0 (2026-10-06)
 
 
