@@ -2185,7 +2185,7 @@ function findLine(lines: readonly number[], offset: number): number {
   while (low <= high) {
     const mid = (low + high) >>> 1;
 
-    if (lines[mid] <= offset) {
+    if (lines[mid]! <= offset) {
       low = mid + 1;
     } else {
       high = mid - 1;
@@ -2207,7 +2207,7 @@ function loc(
 
 function position(lines: readonly number[], offset: number): TSESTree.Position {
   const line = findLine(lines, offset);
-  const lineStart = lines[line];
+  const lineStart = lines[line]!;
 
   return {
     line: line + 1,
