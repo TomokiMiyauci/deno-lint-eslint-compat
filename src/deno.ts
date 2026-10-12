@@ -122,6 +122,9 @@ export function toFixer(
   };
 }
 
+/**
+ * Convert {@link Deno.lint.Fix} to {@link eslint.Rule.Fix}.
+ */
 export function toFix(fix: Deno.lint.Fix): eslint.Rule.Fix {
   return {
     range: fix.range,
