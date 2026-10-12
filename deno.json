@@ -12,6 +12,9 @@
     "eslint": "npm:eslint@^10.11.0",
     "@miyauci/deno-lint-tsestree": "./deno_lint_tsestree/src/mod.ts"
   },
+  "tasks": {
+    "test": "deno test --allow-env"
+  },
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true
