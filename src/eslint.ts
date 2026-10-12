@@ -7,6 +7,7 @@ import * as deno2estree from "@miyauci/deno-lint-tsestree";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 import { DenoEstreeMap, EstreeDenoMap } from "./store.ts";
 import { interpolate } from "./interpolate.ts";
+import type { WeakBiMap } from "bim";
 
 export function toReportData(
   descriptor: eslint.Rule.ReportDescriptor,
@@ -111,17 +112,47 @@ function getMessage(
   return interpolatedMessage;
 }
 
+const cache = new WeakMap<object, ConvertResult>();
+
+interface ConvertResult {
+  node: TSESLint.SourceCode.Program;
+  map: WeakBiMap<Deno.lint.Node, TSESTree.Node>;
+}
+
+/**
+ * Cached convert function.
+ */
+export function cachedConvert(
+  node: Deno.lint.Program,
+  source: string,
+): ConvertResult {
+  const cached = cache.get(node);
+
+  if (cached) return cached;
+
+  const result = deno2estree.convert(node, source);
+
+  toBeSourceCode(result.node);
+
+  const resultValue = {
+    map: result.map,
+    node: result.node,
+  } satisfies ConvertResult;
+
+  cache.set(node, resultValue);
+
+  return resultValue;
+}
+
 export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
   const messages = rule.meta?.messages ?? {};
 
   return {
     create(context): Deno.lint.LintVisitor {
       const { sourceCode: { text, ast }, filename, id } = context;
-      const { map, node } = deno2estree.convert(
-        ast,
-        text,
-      );
-      toBeSourceCode(node);
+      // Linter returns the same AST reference for each rule applied to the same source.
+      // Therefore, it skips AST transformations for the same source, thereby improving performance.
+      const { map, node } = cachedConvert(ast, text);
       const report = Deno2Eslint.createReport(
         context,
         new EstreeDenoMap(map),
