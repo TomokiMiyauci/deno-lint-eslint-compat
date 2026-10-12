@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/compare/v0.2.0...v0.2.1) (2026-10-12)
+
+
+### Performance Improvements
+
+* cache conversions for the same AST ([b61c9d2](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/commit/b61c9d2c3dcca0d5b0269bd35ab0fe70289dbd3b))
+
 ## [0.2.0](https://github.com/TomokiMiyauci/deno-lint-eslint-compat/compare/v0.1.0...v0.2.0) (2026-10-08)
 
 
