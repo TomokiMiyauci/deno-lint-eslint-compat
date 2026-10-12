@@ -117,14 +117,14 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
   return {
     create(context): Deno.lint.LintVisitor {
       const { sourceCode: { text, ast }, filename, id } = context;
-      const { denoEstreeMap, estreeDenoMap, node } = deno2estree.convert(
+      const { map, node } = deno2estree.convert(
         ast,
         text,
       );
       toBeSourceCode(node);
       const report = Deno2Eslint.createReport(
         context,
-        new EstreeDenoMap(estreeDenoMap),
+        new EstreeDenoMap(map),
         messages,
       );
       const sourceCode = Deno2Eslint.toSourceCode(node, text);
@@ -142,7 +142,7 @@ export function toRule(rule: eslint.Rule.RuleModule): Deno.lint.Rule {
       const ruleListener = rule.create(ruleContext);
       const visitor = toLintVisitor(
         ruleListener,
-        new DenoEstreeMap(denoEstreeMap),
+        new DenoEstreeMap(map),
       );
 
       return visitor;
