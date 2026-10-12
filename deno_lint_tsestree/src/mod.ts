@@ -1,4 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
+import bim from "bim";
 import {
   AST_NODE_TYPES as Type,
   type TSESTree,
@@ -2112,25 +2113,17 @@ interface Context {
 }
 
 interface ConvertResult<T> {
-  denoEstreeMap: DenoEstreeWeakMap;
-  estreeDenoMap: EstreeDenoWeakMap;
+  map: bim.WeakBiMap<Deno.lint.Node, TSESTree.Node>;
 
   node: T;
 }
-
-export interface DenoEstreeWeakMap
-  extends WeakMap<Deno.lint.Node, TSESTree.Node> {}
-
-export interface EstreeDenoWeakMap
-  extends WeakMap<TSESTree.Node, Deno.lint.Node> {}
 
 export function convert<T extends Deno.lint.Node>(
   node: T,
   source: string,
 ): ConvertResult<NodeMap[T["type"]]> {
-  const denoEstreeMap = new WeakMap() satisfies DenoEstreeWeakMap;
-  const estreeDenoMap = new WeakMap() satisfies EstreeDenoWeakMap;
   const lines = calcLineStarts(source);
+  const map = new bim.WeakBiMap<Deno.lint.Node, TSESTree.Node>();
 
   function toNode(node: Deno.lint.Node) {
     const target = {
@@ -2139,8 +2132,7 @@ export function convert<T extends Deno.lint.Node>(
       loc: loc(lines, node.range),
     } as TSESTree.Node;
 
-    denoEstreeMap.set(node, target);
-    estreeDenoMap.set(target, node);
+    map.set(node, target);
 
     const properties = definition[node.type](node as any, {
       toNode: toNode as any,
@@ -2149,7 +2141,7 @@ export function convert<T extends Deno.lint.Node>(
     Object.assign(target, properties);
 
     if ("parent" in node) {
-      const parent = denoEstreeMap.get(node.parent as any);
+      const parent = map.get(node.parent as any);
 
       target.parent = parent;
     }
@@ -2161,8 +2153,7 @@ export function convert<T extends Deno.lint.Node>(
 
   return {
     node: tsNode as any,
-    denoEstreeMap,
-    estreeDenoMap,
+    map,
   };
 }
 

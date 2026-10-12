@@ -9,6 +9,7 @@
     "npm:@typescript-eslint/scope-manager@^8.71.0": "8.71.0",
     "npm:@typescript-eslint/types@^8.71.0": "8.71.0",
     "npm:@typescript-eslint/utils@^8.71.0": "8.71.0_eslint@10.11.0_typescript@6.0.3",
+    "npm:bim@^1.3.3": "1.3.3",
     "npm:eslint@^10.11.0": "10.11.0"
   },
   "jsr": {
@@ -204,6 +205,9 @@
     },
     "balanced-match@4.0.4": {
       "integrity": "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="
+    },
+    "bim@1.3.3": {
+      "integrity": "sha512-8JE0PzT5BOcktaH56jIMfTEv11NbdFcHC3jaegESaXq/If69OxOpk/B/lt/MlyTenHAhjPJmQQ8zY4iPzj3oEQ=="
     },
     "brace-expansion@5.0.12": {
       "integrity": "sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==",
@@ -542,6 +546,7 @@
       "npm:@typescript-eslint/scope-manager@^8.71.0",
       "npm:@typescript-eslint/types@^8.71.0",
       "npm:@typescript-eslint/utils@^8.71.0",
+      "npm:bim@^1.3.3",
       "npm:eslint@^10.11.0"
     ]
   }
