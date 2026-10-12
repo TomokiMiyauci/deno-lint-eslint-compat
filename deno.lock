@@ -1,7 +1,9 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/collections@^1.4.0": "1.4.0",
+    "jsr:@std/internal@^1.0.12": "1.0.14",
     "npm:@eslint/core@^1.2.1": "1.2.1",
     "npm:@types/estree@^1.0.9": "1.0.9",
     "npm:@typescript-eslint/scope-manager@^8.71.0": "8.71.0",
@@ -10,8 +12,17 @@
     "npm:eslint@^10.11.0": "10.11.0"
   },
   "jsr": {
+    "@std/assert@1.0.19": {
+      "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
     "@std/collections@1.4.0": {
       "integrity": "bd7f74966e11de11b1f0420b7e8cb7bb381d8af7872b738443b92050db28c9c0"
+    },
+    "@std/internal@1.0.14": {
+      "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
     }
   },
   "npm": {
@@ -524,6 +535,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/assert@^1.0.19",
       "jsr:@std/collections@^1.4.0",
       "npm:@eslint/core@^1.2.1",
       "npm:@types/estree@^1.0.9",

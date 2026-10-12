@@ -66,7 +66,7 @@ function getOffset(
   return offset + position.column;
 }
 
-function normalizeMessagePlaceholderData(
+export function normalizeMessagePlaceholderData(
   data: MessagePlaceholderData,
 ): Record<string, string> {
   return mapValues(data, String);
@@ -78,8 +78,8 @@ function normalizeMessagePlaceholderData(
  * @returns The computed message.
  * @throws {TypeError} If `descriptor.messageId` is defined and messages'key is not defined.
  */
-function computeMessageFromDescriptor(
-  descriptor: eslint.Rule.ReportDescriptor,
+export function computeMessageFromDescriptor(
+  descriptor: eslint.Rule.ReportDescriptorMessage,
   messages: Record<string, string>,
 ): string {
   if ("messageId" in descriptor) {
